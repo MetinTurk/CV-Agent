@@ -1,5 +1,6 @@
-// Module: Renders the static "CV Ozellestirme Sihirbazi - Inceleme" final review page UI.
+// Module: Renders the tailored CV produced by the LLM (passed via router state).
 import type { JSX } from "react"
+import { useLocation, useNavigate } from "react-router"
 import {
   ArrowLeft,
   Briefcase,
@@ -27,6 +28,9 @@ import {
 import { Separator } from "@workspace/ui/components/separator"
 import { cn } from "@workspace/ui/lib/utils"
 
+import type { TailoredCv } from "@/lib/cv-generation-api"
+import type { JobAnalysisResponse } from "@/lib/job-analysis-api"
+
 type ReviewStepStatus = "completed" | "active" | "pending"
 
 type ReviewStep = {
@@ -42,11 +46,10 @@ type ReviewSidebarItem = {
   isActive?: boolean
 }
 
-type ReviewExperience = {
-  role: string
-  company: string
-  period: string
-  bullets: string[]
+type CvReviewLocationState = {
+  tailoredCv?: TailoredCv
+  analysis?: JobAnalysisResponse
+  token?: string
 }
 
 const reviewSteps: ReviewStep[] = [
@@ -65,37 +68,6 @@ const reviewSidebarItems: ReviewSidebarItem[] = [
     isActive: true,
   },
   { href: "#belgeler", label: "Belgeler", icon: FileText },
-]
-
-const reviewSkills: string[] = [
-  "AWS (Multi-region)",
-  "Kubernetes / Docker",
-  "Terraform / IaC",
-  "Java / Spring Boot",
-  "Microservices Design",
-  "Event-Driven Architecture",
-]
-
-const reviewExperiences: ReviewExperience[] = [
-  {
-    role: "Lead Cloud Architect",
-    company: "TechFlow Corp",
-    period: "2019 - Günümüz",
-    bullets: [
-      "5M+ kullanıcı için gecikme süresini %40 azaltan global çok bulutlu dağıtım platformu mimarisi tasarladı.",
-      "200+ eski servisin konteyner tabanlı Kubernetes ortamına taşınmasını yönetti.",
-      "Dağıtım süresini günlerden dakikalara indiren otomatik CI/CD hatlarını hayata geçirdi.",
-    ],
-  },
-  {
-    role: "Senior Software Engineer",
-    company: "Innovate.ai",
-    period: "2015 - 2019",
-    bullets: [
-      "Olay güdümlü mikroservis altyapısını Kafka üzerinde yeniden tasarlayarak veri işleme kapasitesini üç katına çıkardı.",
-      "Spring Boot tabanlı API katmanını yeniden yapılandırarak ortalama yanıt süresini 320 ms'den 110 ms'ye düşürdü.",
-    ],
-  },
 ]
 
 function ReviewSidebar(): JSX.Element {
@@ -277,7 +249,11 @@ function ReviewToolbar(): JSX.Element {
   )
 }
 
-function ReviewCvDocument(): JSX.Element {
+type ReviewCvDocumentProps = {
+  cv: TailoredCv
+}
+
+function ReviewCvDocument({ cv }: ReviewCvDocumentProps): JSX.Element {
   return (
     <article
       className="mx-auto w-full max-w-3xl rounded-lg border border-border bg-background px-10 py-9 shadow-sm"
@@ -285,76 +261,218 @@ function ReviewCvDocument(): JSX.Element {
     >
       <header className="border-b border-border pb-4">
         <h2 className="text-3xl font-bold tracking-tight text-foreground">
-          Alex Rivera
+          {cv.full_name.length > 0 ? cv.full_name : "Adınız Soyadınız"}
         </h2>
-        <p className="mt-1 text-sm font-medium text-primary">
-          Principal Solutions Architect
-        </p>
+        {cv.title.length > 0 ? (
+          <p className="mt-1 text-sm font-medium text-primary">{cv.title}</p>
+        ) : null}
+        {cv.location !== null && cv.location.length > 0 ? (
+          <p className="mt-1 text-xs text-muted-foreground">{cv.location}</p>
+        ) : null}
       </header>
 
-      <section className="mt-6 space-y-2">
-        <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-          Professional Summary
-        </h3>
-        <p className="text-sm leading-6 text-foreground">
-          High-impact Solutions Architect with 12+ years of experience
-          specializing in distributed systems and cloud-native architectures.
-          Proven track record of leading large-scale digital transformations
-          and optimizing enterprise-grade cloud infrastructures.
-        </p>
-      </section>
+      {cv.summary.length > 0 ? (
+        <section className="mt-6 space-y-2">
+          <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            Profesyonel Özet
+          </h3>
+          <p className="text-sm leading-6 text-foreground">{cv.summary}</p>
+        </section>
+      ) : null}
 
-      <section className="mt-6 space-y-3">
-        <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-          Key Skills
-        </h3>
-        <div className="flex flex-wrap gap-2">
-          {reviewSkills.map((skill) => (
-            <Badge
-              key={skill}
-              variant="outline"
-              className="rounded-md border-border bg-background px-2.5 py-1 text-xs font-normal text-foreground"
-            >
-              {skill}
-            </Badge>
-          ))}
-        </div>
-      </section>
+      {cv.skills.length > 0 ? (
+        <section className="mt-6 space-y-3">
+          <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            Öne Çıkan Yetkinlikler
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {cv.skills.map((skill) => (
+              <Badge
+                key={skill}
+                variant="outline"
+                className="rounded-md border-border bg-background px-2.5 py-1 text-xs font-normal text-foreground"
+              >
+                {skill}
+              </Badge>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
-      <section className="mt-6 space-y-4">
-        <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-          Professional Experience
-        </h3>
-        <div className="space-y-5">
-          {reviewExperiences.map((experience) => (
-            <div
-              key={`${experience.role}-${experience.period}`}
-              className="space-y-2"
-            >
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <p className="text-sm font-semibold text-foreground">
-                  {experience.role} | {experience.company}
-                </p>
-                <p className="text-xs font-medium text-muted-foreground">
-                  {experience.period}
-                </p>
+      {cv.experiences.length > 0 ? (
+        <section className="mt-6 space-y-4">
+          <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            Deneyim
+          </h3>
+          <div className="space-y-5">
+            {cv.experiences.map((experience, index) => (
+              <div
+                key={`${experience.role}-${experience.company}-${index}`}
+                className="space-y-2"
+              >
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <p className="text-sm font-semibold text-foreground">
+                    {experience.role}
+                    {experience.company.length > 0
+                      ? ` | ${experience.company}`
+                      : ""}
+                  </p>
+                  {experience.period.length > 0 ? (
+                    <p className="text-xs font-medium text-muted-foreground">
+                      {experience.period}
+                    </p>
+                  ) : null}
+                </div>
+                {experience.bullets.length > 0 ? (
+                  <ul className="space-y-1.5 pl-4 text-sm leading-6 text-foreground">
+                    {experience.bullets.map((bullet, bulletIndex) => (
+                      <li
+                        key={bulletIndex}
+                        className="list-disc marker:text-muted-foreground"
+                      >
+                        {bullet}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
               </div>
-              <ul className="space-y-1.5 pl-4 text-sm leading-6 text-foreground">
-                {experience.bullets.map((bullet, bulletIndex) => (
-                  <li key={bulletIndex} className="list-disc marker:text-muted-foreground">
-                    {bullet}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-      </section>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {cv.projects.length > 0 ? (
+        <section className="mt-6 space-y-3">
+          <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            Projeler
+          </h3>
+          <ul className="space-y-2 text-sm leading-6 text-foreground">
+            {cv.projects.map((project, index) => (
+              <li key={`${project.name}-${index}`}>
+                <span className="font-medium">{project.name}</span>
+                {project.description.length > 0 ? (
+                  <span className="text-muted-foreground">
+                    {" "}
+                    — {project.description}
+                  </span>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {cv.educations.length > 0 ? (
+        <section className="mt-6 space-y-3">
+          <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            Eğitim
+          </h3>
+          <ul className="space-y-2 text-sm leading-6 text-foreground">
+            {cv.educations.map((education, index) => (
+              <li
+                key={`${education.institution}-${index}`}
+                className="flex flex-wrap items-baseline justify-between gap-2"
+              >
+                <span>
+                  <span className="font-medium">{education.institution}</span>
+                  {education.degree.length > 0
+                    ? ` — ${education.degree}`
+                    : ""}
+                </span>
+                {education.period.length > 0 ? (
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {education.period}
+                  </span>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {cv.certifications.length > 0 ? (
+        <section className="mt-6 space-y-3">
+          <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            Sertifikalar
+          </h3>
+          <ul className="space-y-1 text-sm leading-6 text-foreground">
+            {cv.certifications.map((cert, index) => (
+              <li key={`${cert}-${index}`} className="list-disc pl-4">
+                {cert}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {cv.languages.length > 0 ? (
+        <section className="mt-6 space-y-3">
+          <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            Diller
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {cv.languages.map((language) => (
+              <Badge
+                key={language}
+                variant="outline"
+                className="rounded-md border-border bg-background px-2.5 py-1 text-xs font-normal text-foreground"
+              >
+                {language}
+              </Badge>
+            ))}
+          </div>
+        </section>
+      ) : null}
+    </article>
+  )
+}
+
+function EmptyCvState({
+  onBack,
+}: {
+  onBack: () => void
+}): JSX.Element {
+  return (
+    <article
+      className="mx-auto w-full max-w-3xl rounded-lg border border-dashed border-border bg-background px-10 py-12 text-center shadow-sm"
+      aria-label="CV bulunamadı"
+    >
+      <h2 className="text-xl font-semibold tracking-tight text-foreground">
+        Henüz oluşturulmuş bir CV yok
+      </h2>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Bu ilana özel bir CV oluşturmak için önce iş analizi sayfasına dönüp
+        "Bu İlana Özel CV Oluştur" düğmesine tıklayın.
+      </p>
+      <Button
+        type="button"
+        variant="outline"
+        className="mt-6"
+        onClick={onBack}
+      >
+        <ArrowLeft data-icon="inline-start" />
+        İş Analizine Dön
+      </Button>
     </article>
   )
 }
 
 export function CvReviewPage(): JSX.Element {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const state = (location.state ?? null) as CvReviewLocationState | null
+  const tailoredCv = state?.tailoredCv ?? null
+
+  const handleBack = (): void => {
+    if (state?.analysis !== undefined) {
+      navigate("/job-analysis", {
+        state: { analysis: state.analysis, token: state.token },
+      })
+      return
+    }
+    navigate(-1)
+  }
+
   return (
     <div className="flex min-h-svh bg-muted/30">
       <ReviewSidebar />
@@ -366,9 +484,10 @@ export function CvReviewPage(): JSX.Element {
             variant="ghost"
             size="sm"
             className="w-fit text-muted-foreground hover:text-foreground"
+            onClick={handleBack}
           >
             <ArrowLeft data-icon="inline-start" />
-            Düzenlemeye Geri Dön
+            İş Analizine Dön
           </Button>
 
           <h1 className="text-2xl font-semibold tracking-tight">
@@ -386,7 +505,11 @@ export function CvReviewPage(): JSX.Element {
           </CardHeader>
 
           <CardContent className="bg-muted/30 py-8">
-            <ReviewCvDocument />
+            {tailoredCv !== null ? (
+              <ReviewCvDocument cv={tailoredCv} />
+            ) : (
+              <EmptyCvState onBack={handleBack} />
+            )}
           </CardContent>
         </Card>
       </main>
