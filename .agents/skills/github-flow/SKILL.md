@@ -1,24 +1,43 @@
 ---
 name: github-flow
-description: "Use this skill for every CV-Agent development task that changes code, tests, documentation, configuration, UI, API, database behavior, or repository workflow. Enforces the mandatory GitHub Flow: create an issue, create a branch, share the issue link, implement, open a PR, complete Codex and user review, merge, and close the issue."
+description: "Use this skill for every CV-Agent development task that changes code, tests, documentation, configuration, UI, API, database behavior, or repository workflow. Enforces the mandatory HTTPS-only GitHub Flow: create an issue, create a branch, share the issue link, implement, open a PR, complete Codex and user review, merge, and close the issue. Never use SSH remotes or git@github.com URLs."
 ---
 
 # GitHub Flow
+
+## GitHub HTTPS Bağlantı Kuralı
+
+Bu skill kullanıldığında GitHub işlemleri kesinlikle HTTPS üzerinden yapılır. SSH remote, SSH clone URL, `git@github.com:` veya `ssh://git@github.com/` formatı kullanılmaz.
+
+Her issue, branch, commit, push veya PR akışının başında şu kontroller yapılır:
+
+1. `git remote -v` ile `origin` fetch ve push URL'leri kontrol edilir.
+2. `origin` fetch ve push URL'leri `https://github.com/<owner>/<repo>.git` formatında değilse düzeltilir.
+3. `gh config get git_protocol --host github.com` çıktısı `https` değilse `gh config set git_protocol https --host github.com` çalıştırılır.
+4. SSH URL'lerinin tekrar devreye girmesini önlemek için GitHub SSH URL rewrite kuralları kontrol edilir:
+
+```bash
+git config --global url.https://github.com/.insteadOf git@github.com:
+git config --global --add url.https://github.com/.insteadOf ssh://git@github.com/
+```
+
+Bu kontroller tamamlanmadan issue oluşturma, branch açma, push veya PR açma adımına geçilmez. GitHub aracı veya CLI herhangi bir adımda SSH URL üretirse işlem durdurulur, URL HTTPS'e çevrilir ve aynı adım HTTPS ile tekrar denenir.
 
 CV-Agent geliştirmesinde GitHub Flow zorunludur. Kod, test, dokümantasyon, konfigürasyon, UI, API, database veya repo iş akışı değişikliği yapılacaksa bu skill kullanılmalıdır.
 
 ## Zorunlu Sıra
 
-1. Issue oluştur.
-2. Branch oluştur.
-3. Issue linkini kullanıcıyla paylaş.
-4. İşi implemente et.
-5. Doğrula ve atomic commit at.
-6. Branch'i push'la.
-7. PR aç.
-8. Codex review ve user review tamamla.
-9. Merge et.
-10. Issue kapat.
+1. GitHub HTTPS bağlantı kuralını doğrula.
+2. Issue oluştur.
+3. Branch oluştur.
+4. Issue linkini kullanıcıyla paylaş.
+5. İşi implemente et.
+6. Doğrula ve atomic commit at.
+7. Branch'i HTTPS remote'a push'la.
+8. PR'ı HTTPS GitHub bağlantısıyla aç.
+9. Codex review ve user review tamamla.
+10. Merge et.
+11. Issue kapat.
 
 ## Yönlendirme Kapıları
 
@@ -167,7 +186,14 @@ Bir commit yalnızca tek mantıksal değişikliği kapsamalıdır. Aynı issue i
 
 ## Push Kuralı
 
-Commit atıldıktan sonra branch remote'a push'lanır:
+Commit atıldıktan sonra branch HTTPS remote'a push'lanır. Push öncesi `git remote -v` çıktısında hem fetch hem push URL'si `https://github.com/<owner>/<repo>.git` formatında olmalıdır. SSH URL görülürse önce şu şekilde düzeltilir:
+
+```bash
+git remote set-url origin https://github.com/<owner>/<repo>.git
+git remote set-url --push origin https://github.com/<owner>/<repo>.git
+```
+
+Remote doğrulandıktan sonra push yapılır:
 
 ```bash
 git push -u origin codex/<issue-number>-<short-slug>
@@ -179,9 +205,11 @@ Yerel branch adı slash içermeyen fallback formatındaysa aynı ad push komutun
 git push -u origin codex-<issue-number>-<short-slug>
 ```
 
-Push başarılı olduktan sonra kullanıcıya remote branch adı söylenir. Push başarısız olursa hata nedeni özetlenir, kullanıcıdan yetki/remote problemi için aksiyon istenir ve PR adımına geçilmez.
+Push başarılı olduktan sonra kullanıcıya remote branch adı söylenir. Push başarısız olursa hata nedeni özetlenir, kullanıcıdan yetki/remote problemi için aksiyon istenir ve PR adımına geçilmez. Hata SSH, public key, permission denied veya `git@github.com` kaynaklıysa SSH ile devam edilmez; remote/protocol HTTPS'e çevrilir ve push HTTPS ile tekrar denenir.
 
 ## PR Kuralı
+
+PR açmadan önce `gh config get git_protocol --host github.com` çıktısının `https` olduğu doğrulanır. `gh` veya GitHub aracı SSH URL, SSH clone URL ya da `git@github.com:` formatı önerirse kullanılmaz; PR işlemi HTTPS repo bağlantısı üzerinden tamamlanır.
 
 PR başlığı issue ile aynı işi anlatmalıdır. PR açıklaması şu bilgileri içermelidir:
 
