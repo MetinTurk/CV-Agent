@@ -90,8 +90,16 @@ export class ProfileAgentClient {
     }
 
     const response = await this.fetchWithRetries(request)
-    const text = extractGeminiText(response)
-    return parseProfileAgentResult(text)
+
+    try {
+      const text = extractGeminiText(response)
+      return parseProfileAgentResult(text)
+    } catch (error) {
+      throw new ProfileAgentRequestError(
+        "Profil asistanı LLM yanıtı işlenemedi.",
+        error instanceof Error ? { cause: error } : undefined
+      )
+    }
   }
 
   private async fetchWithRetries(
@@ -208,7 +216,7 @@ function extractGeminiText(response: GeminiResponse): string {
   return text
 }
 
-function parseProfileAgentResult(text: string): ProfileAgentResult {
+export function parseProfileAgentResult(text: string): ProfileAgentResult {
   const parsedJson = parseJsonObject(text)
 
   if (!isProfileAgentJson(parsedJson)) {
@@ -217,7 +225,7 @@ function parseProfileAgentResult(text: string): ProfileAgentResult {
 
   return {
     reply: parsedJson.reply,
-    profilePatch: parsedJson.profile_patch,
+    profilePatch: sanitizeProfilePatch(parsedJson.profile_patch),
   }
 }
 
@@ -236,7 +244,7 @@ function parseJsonObject(text: string): unknown {
 
 function isProfileAgentJson(value: unknown): value is {
   reply: string
-  profile_patch: ProfilePatch
+  profile_patch: Record<string, unknown>
 } {
   if (typeof value !== "object" || value === null) {
     return false
@@ -245,51 +253,45 @@ function isProfileAgentJson(value: unknown): value is {
   const candidate = value as ProfileAgentJson
   return (
     typeof candidate.reply === "string" &&
-    isProfilePatch(candidate.profile_patch)
+    isObjectRecord(candidate.profile_patch)
   )
 }
 
-function isProfilePatch(value: unknown): value is ProfilePatch {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    return false
-  }
-
-  const candidate = value as Record<string, unknown>
+function sanitizeProfilePatch(value: Record<string, unknown>): ProfilePatch {
+  const profilePatch: ProfilePatch = {}
   const allowedStringFields = [
     "full_name",
     "location",
     "education",
     "additional_information",
-  ]
+  ] as const
   const allowedListFields = [
     "skills",
     "projects",
     "certifications",
     "languages",
     "work_experiences",
-  ]
-  const allowedFields = new Set([...allowedStringFields, ...allowedListFields])
-
-  for (const [fieldName, fieldValue] of Object.entries(candidate)) {
-    if (!allowedFields.has(fieldName)) {
-      return false
-    }
-
-    if (
-      allowedStringFields.includes(fieldName) &&
-      typeof fieldValue !== "string"
-    ) {
-      return false
-    }
-
-    if (
-      allowedListFields.includes(fieldName) &&
-      (!Array.isArray(fieldValue) ||
-        fieldValue.some((item) => typeof item !== "string"))
-    ) {
-      return false
+  ] as const
+  for (const fieldName of allowedStringFields) {
+    const fieldValue = value[fieldName]
+    if (typeof fieldValue === "string") {
+      profilePatch[fieldName] = fieldValue
     }
   }
 
-  return true
+  for (const fieldName of allowedListFields) {
+    const fieldValue = value[fieldName]
+    if (
+      Array.isArray(fieldValue) &&
+      fieldValue.every((item) => typeof item === "string")
+    ) {
+      profilePatch[fieldName] = fieldValue
+    }
+  }
+
+  return profilePatch
+}
+
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
 }
