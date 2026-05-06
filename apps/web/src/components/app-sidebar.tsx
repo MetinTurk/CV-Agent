@@ -3,7 +3,7 @@ import type { JSX } from "react"
 import {
   BarChart3,
   Bot,
-  GraduationCap,
+  BriefcaseBusiness,
   MessageCircle,
   PlusCircle,
   UserRound,
@@ -14,38 +14,46 @@ import { Button } from "@workspace/ui/components/button"
 import { Separator } from "@workspace/ui/components/separator"
 import { cn } from "@workspace/ui/lib/utils"
 
+export type SidebarView = "profile" | "applications" | "analysis" | "assistant"
+
 type SidebarNavItem = {
-  href: string
+  view: SidebarView
   label: string
   icon: LucideIcon
-  isActive?: boolean
 }
 
 const sidebarNavItems: SidebarNavItem[] = [
   {
-    href: "#profilim",
+    view: "profile",
     label: "Profilim",
     icon: UserRound,
-    isActive: true,
   },
   {
-    href: "#is-analizi",
+    view: "applications",
+    label: "Geçmiş Başvurular",
+    icon: BriefcaseBusiness,
+  },
+  {
+    view: "analysis",
     label: "İş Analizi",
     icon: BarChart3,
   },
   {
-    href: "#gelisim-merkezi",
-    label: "Gelişim Merkezi",
-    icon: GraduationCap,
-  },
-  {
-    href: "#ai-kariyer-sohbeti",
-    label: "AI Kariyer Sohbeti",
+    view: "assistant",
+    label: "Yapay Zeka Sohbet",
     icon: MessageCircle,
   },
 ]
 
-export function AppSidebar(): JSX.Element {
+type AppSidebarProps = {
+  activeView: SidebarView
+  onNavigate: (view: SidebarView) => void
+}
+
+export function AppSidebar({
+  activeView,
+  onNavigate,
+}: AppSidebarProps): JSX.Element {
   return (
     <aside
       className="hidden min-h-svh w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground lg:flex"
@@ -57,10 +65,14 @@ export function AppSidebar(): JSX.Element {
         </div>
         <a
           href="#profilim"
+          onClick={(event) => {
+            event.preventDefault()
+            onNavigate("profile")
+          }}
           className="min-w-0"
         >
           <span className="block truncate text-base font-semibold tracking-normal">
-            Kariyer Asistanı
+            Kariyer Yardımcı Pilotu
           </span>
           <span className="block truncate text-xs text-muted-foreground">
             Yapay Zeka Destekli
@@ -70,26 +82,29 @@ export function AppSidebar(): JSX.Element {
 
       <Separator />
 
-      <nav className="flex flex-1 flex-col gap-1 px-3 py-4" aria-label="Sayfa bölümleri">
+      <nav
+        className="flex flex-1 flex-col gap-1 px-3 py-4"
+        aria-label="Sayfa bölümleri"
+      >
         {sidebarNavItems.map((item) => {
           const Icon = item.icon
+          const isActive = activeView === item.view
 
           return (
             <Button
-              key={item.href}
-              asChild
+              key={item.view}
+              type="button"
               variant="ghost"
               size="lg"
+              onClick={() => onNavigate(item.view)}
               className={cn(
                 "relative w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                item.isActive &&
-                  "bg-sidebar-accent text-sidebar-primary after:absolute after:right-1.5 after:top-1/2 after:h-5 after:w-1 after:-translate-y-1/2 after:rounded-full after:bg-sidebar-primary"
+                isActive &&
+                  "bg-sidebar-accent text-sidebar-primary after:absolute after:top-1/2 after:right-1.5 after:h-5 after:w-1 after:-translate-y-1/2 after:rounded-full after:bg-sidebar-primary"
               )}
             >
-              <a href={item.href} title={item.label}>
-                <Icon data-icon="inline-start" />
-                <span className="truncate">{item.label}</span>
-              </a>
+              <Icon data-icon="inline-start" />
+              <span className="truncate">{item.label}</span>
             </Button>
           )
         })}

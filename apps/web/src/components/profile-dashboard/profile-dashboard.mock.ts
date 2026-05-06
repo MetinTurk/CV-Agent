@@ -43,6 +43,16 @@ export type AllProjectItem = {
   tone: "primary" | "secondary" | "accent"
 }
 
+export type AnalysisSkillGroup = {
+  title: string
+  subtitle: string
+}
+
+export type AnalysisRecommendationItem = {
+  title: string
+  description: string
+}
+
 export type CertificateItem = {
   title: string
   meta: string
@@ -145,6 +155,66 @@ export const profileDashboardMock = {
       tone: "accent",
     },
   ] satisfies AllProjectItem[],
+  jobAnalysis: {
+    title: "İş İlanı Analizi: Kıdemli Ürün Tasarımcısı",
+    company: "Stripe",
+    jobLinkLabel: "İş İlanı Linki",
+    workMode: "Uzaktan • Tam Zamanlı",
+    score: 85,
+    decision: "Karar: Başvur - Yüksek Uyum",
+    strengths: [
+      {
+        title: "Ürün Tasarımında 5+ yıl",
+        subtitle: "6 Yıl Deneyim (Eşleşti)",
+      },
+      {
+        title: "Figma ve Tasarım Sistemleri",
+        subtitle: "Sistem Lideri (Eşleşti)",
+      },
+    ] satisfies AnalysisSkillGroup[],
+    improvements: [
+      {
+        title: "Güçlü Paydaş Yönetimi",
+        subtitle: "Liderlik rolü (Kısmen)",
+      },
+      {
+        title: "GraphQL Bilgisi",
+        subtitle: "Geliştirme aşamasında",
+      },
+    ] satisfies AnalysisSkillGroup[],
+    gaps: [
+      {
+        title: "AWS/Bulut Deneyimi",
+        subtitle: "Deneyim bulunamadı",
+      },
+      {
+        title: "Özel Teknik Yetenekler",
+        subtitle: "Eksik veri",
+      },
+    ] satisfies AnalysisSkillGroup[],
+    recommendations: [
+      {
+        title: "Özgeçmişinizi Güncelleyin",
+        description:
+          "Stripe'ın odaklandığı Figma ve Tasarım Sistemleri tecrübenizi ön plana çıkarın.",
+      },
+      {
+        title: "Hızlı Kazanım: AWS Uygulayıcı Temelleri",
+        description:
+          "Terminolojiyi anlamak için 2 saatlik Coursera kursunu tamamlayarak AWS altyapısı eksikliğinizi giderin.",
+      },
+      {
+        title: "Proje: API Paneli Yeniden Tasarımı",
+        description:
+          "GraphQL kavramlarını bir Figma vaka çalışmasına uygulayarak pratik deneyim kazanın.",
+      },
+      {
+        title: "Mülakat Hazırlığı: Stripe Sistem Vakası",
+        description:
+          "Stripe tasarım meydan okumasının rehberli simülasyonu ile mülakata hazırlanın.",
+      },
+    ] satisfies AnalysisRecommendationItem[],
+  },
   certificates: [
     {
       title: "Alex_Thompson_CV_2...",

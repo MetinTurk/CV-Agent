@@ -5,10 +5,14 @@ import {
   ArrowUpRight,
   Bell,
   ChevronDown,
+  CheckCircle2,
+  CircleX,
   Download,
+  ExternalLink,
   Eye,
   Info,
   Link,
+  ListChecks,
   MessageCircle,
   LogOut,
   Pencil,
@@ -17,6 +21,7 @@ import {
   Sparkles,
   Search,
   Settings,
+  TrendingUp,
   X,
 } from "lucide-react"
 
@@ -45,6 +50,7 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import type { AuthUser } from "@/lib/auth-api"
 import {
   profileDashboardMock,
+  type AnalysisSkillGroup,
   type AllProjectItem,
   type CertificateItem,
   type ContactItem,
@@ -57,14 +63,16 @@ type ProfileDashboardPageProps = {
   onLogout: () => void
 }
 
-type DashboardView = "profile" | "projects"
+type DashboardView = "profile" | "projects" | "analysis"
 
 function DashboardHeader({
   accountName,
   onLogout,
+  searchPlaceholder,
 }: {
   accountName: string
   onLogout: () => void
+  searchPlaceholder: string
 }): JSX.Element {
   return (
     <header className="sticky top-0 z-10 flex min-h-16 flex-col gap-3 border-b border-border bg-background/95 px-4 py-3 backdrop-blur md:px-6 lg:flex-row lg:items-center lg:justify-between">
@@ -72,8 +80,8 @@ function DashboardHeader({
         <Search className="pointer-events-none absolute top-1/2 left-3 text-muted-foreground" />
         <Input
           type="search"
-          placeholder="Ara..."
-          aria-label="Profil dashboard içinde ara"
+          placeholder={searchPlaceholder}
+          aria-label={searchPlaceholder}
           className="h-10 bg-muted/40 pl-9"
         />
       </div>
@@ -549,6 +557,180 @@ function ProjectsOverviewPage({ onBack }: { onBack: () => void }): JSX.Element {
   )
 }
 
+function ScoreRing({ score }: { score: number }): JSX.Element {
+  return (
+    <div
+      className="mx-auto flex size-56 items-center justify-center rounded-full"
+      style={{
+        background: `conic-gradient(var(--primary) ${score * 3.6}deg, var(--muted) 0deg)`,
+      }}
+      aria-label={`Genel uyumluluk puanı yüzde ${score}`}
+    >
+      <div className="flex size-44 flex-col items-center justify-center rounded-full bg-card">
+        <span className="text-5xl font-semibold tracking-normal text-primary">
+          {score}%
+        </span>
+        <span className="mt-2 text-sm font-medium text-muted-foreground">
+          UYUM
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function AnalysisColumn({
+  title,
+  icon,
+  tone,
+  items,
+}: {
+  title: string
+  icon: JSX.Element
+  tone: "success" | "improve" | "danger"
+  items: AnalysisSkillGroup[]
+}): JSX.Element {
+  const toneClass = {
+    success: "border-primary/20 bg-primary/5 text-primary",
+    improve: "border-sidebar-primary/20 bg-sidebar-accent text-sidebar-primary",
+    danger: "border-destructive/20 bg-destructive/5 text-destructive",
+  }[tone]
+
+  return (
+    <div className="flex min-w-0 flex-col gap-4">
+      <div className="flex items-center gap-2">
+        {icon}
+        <h3 className="text-sm font-semibold tracking-normal uppercase">
+          {title}
+        </h3>
+      </div>
+      <div className="grid gap-3">
+        {items.map((item) => (
+          <div
+            key={item.title}
+            className={cn("rounded-lg border p-3", toneClass)}
+          >
+            <p className="text-base leading-6 font-medium text-foreground">
+              {item.title}
+            </p>
+            <p className="mt-1 text-xs font-medium">{item.subtitle}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function JobAnalysisPage(): JSX.Element {
+  const analysis = profileDashboardMock.jobAnalysis
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-3xl font-semibold tracking-normal md:text-4xl">
+            {analysis.title}
+          </h1>
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-base">
+            <span className="font-semibold text-muted-foreground">
+              {analysis.company}
+            </span>
+            <span className="size-1 rounded-full bg-muted-foreground/50" />
+            <Button
+              type="button"
+              variant="link"
+              className="h-auto p-0 text-base"
+            >
+              {analysis.jobLinkLabel}
+              <ExternalLink data-icon="inline-end" />
+            </Button>
+          </div>
+          <p className="mt-2 text-base text-muted-foreground">
+            {analysis.workMode}
+          </p>
+        </div>
+
+        <Button
+          type="button"
+          size="lg"
+          className="h-14 px-7 text-base shadow-md"
+        >
+          <ListChecks data-icon="inline-start" />
+          Özel CV Oluştur
+        </Button>
+      </div>
+
+      <section className="grid gap-5 xl:grid-cols-[minmax(320px,0.65fr)_minmax(0,1.35fr)]">
+        <Card className="items-center justify-center gap-7 p-8">
+          <CardTitle className="text-2xl">Genel Uyumluluk Puanı</CardTitle>
+          <ScoreRing score={analysis.score} />
+          <Badge className="rounded-full bg-primary/10 px-5 py-2 text-sm font-semibold text-primary">
+            {analysis.decision}
+          </Badge>
+        </Card>
+
+        <Card className="gap-8 p-8">
+          <CardHeader>
+            <CardTitle className="text-2xl">
+              Analiz Özeti: Yetenek Uyumu
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-6 lg:grid-cols-3">
+            <AnalysisColumn
+              title="Yeterli Yönler"
+              tone="success"
+              icon={<CheckCircle2 className="text-primary" />}
+              items={analysis.strengths}
+            />
+            <AnalysisColumn
+              title="Geliştirilmeli"
+              tone="improve"
+              icon={<TrendingUp className="text-sidebar-primary" />}
+              items={analysis.improvements}
+            />
+            <AnalysisColumn
+              title="Eksik Yönler"
+              tone="danger"
+              icon={<CircleX className="text-destructive" />}
+              items={analysis.gaps}
+            />
+          </CardContent>
+        </Card>
+      </section>
+
+      <Card className="gap-8 p-8">
+        <CardHeader>
+          <CardTitle className="text-2xl">Tavsiyeler</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col">
+            {analysis.recommendations.map((item, index) => (
+              <div
+                key={item.title}
+                className="grid grid-cols-[auto_minmax(0,1fr)] gap-4"
+              >
+                <div className="flex flex-col items-center">
+                  <div className="flex size-10 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
+                    {index + 1}
+                  </div>
+                  {index < analysis.recommendations.length - 1 ? (
+                    <div className="h-full min-h-9 w-px bg-border" />
+                  ) : null}
+                </div>
+                <div className="min-w-0 pb-6">
+                  <p className="font-semibold">{item.title}</p>
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                    {item.description}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
 function getCertificateToneClass(tone: CertificateItem["tone"]): string {
   if (tone === "primary") {
     return "bg-primary/10 text-primary"
@@ -652,16 +834,29 @@ export function ProfileDashboardPage({
 }: ProfileDashboardPageProps): JSX.Element {
   const accountName = `${user.first_name} ${user.last_name}`
   const [dashboardView, setDashboardView] = useState<DashboardView>("profile")
+  const searchPlaceholder =
+    dashboardView === "analysis" ? "Analizlerde ara..." : "Ara..."
 
   return (
     <div className="flex min-h-svh bg-muted/30">
-      <AppSidebar />
+      <AppSidebar
+        activeView={dashboardView === "analysis" ? "analysis" : "profile"}
+        onNavigate={(view) => {
+          setDashboardView(view === "analysis" ? "analysis" : "profile")
+        }}
+      />
 
       <main className="min-w-0 flex-1 overflow-y-auto">
-        <DashboardHeader accountName={accountName} onLogout={onLogout} />
+        <DashboardHeader
+          accountName={accountName}
+          onLogout={onLogout}
+          searchPlaceholder={searchPlaceholder}
+        />
 
         <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-5 px-4 py-5 md:px-6 lg:py-6">
-          {dashboardView === "projects" ? (
+          {dashboardView === "analysis" ? (
+            <JobAnalysisPage />
+          ) : dashboardView === "projects" ? (
             <ProjectsOverviewPage onBack={() => setDashboardView("profile")} />
           ) : (
             <>
