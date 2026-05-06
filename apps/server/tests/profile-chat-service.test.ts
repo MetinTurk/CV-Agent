@@ -66,6 +66,43 @@ test("profile chat sends user messages to the LLM agent", async () => {
   expect(response.is_profile_ready).toBe(false)
 })
 
+test("profile chat forwards extracted source context to the LLM agent", async () => {
+  const agentRequests: ProfileAgentRequest[] = []
+  const service = new ProfileChatService(testSettings, {
+    async generateResponse(request) {
+      agentRequests.push(request)
+
+      return {
+        reply: "DOCX içeriğini kaydettim. Eğitim bilgini paylaşır mısın?",
+        profilePatch: {
+          projects: ["Kariyer takip paneli"],
+        },
+      }
+    },
+  })
+
+  const response = await service.chat(
+    testUser,
+    {
+      message: "Bu dokümandaki profil bilgilerimi kullan.",
+      session_id: "first-login-profile",
+    },
+    {
+      type: "docx",
+      label: "profile.docx",
+      content: "Kariyer takip paneli projesinde React kullandım.",
+    }
+  )
+
+  expect(agentRequests).toHaveLength(1)
+  expect(agentRequests[0]?.sourceContext).toEqual({
+    type: "docx",
+    label: "profile.docx",
+    content: "Kariyer takip paneli projesinde React kullandım.",
+  })
+  expect(response.profile.projects).toEqual(["Kariyer takip paneli"])
+})
+
 test("profile chat does not generate a local fallback response when LLM fails", async () => {
   const service = new ProfileChatService(testSettings, {
     async generateResponse() {

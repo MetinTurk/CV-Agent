@@ -7,6 +7,7 @@ import {
   type ProfileChatResponse,
   type ProfileData,
   type ProfilePatch,
+  type ProfileSourceContext,
   type RequiredProfileField,
 } from "../schemas/profile-chat"
 import {
@@ -48,7 +49,8 @@ export class ProfileChatService {
 
   async chat(
     user: UserRecord,
-    request: ProfileChatRequest
+    request: ProfileChatRequest,
+    sourceContext?: ProfileSourceContext
   ): Promise<ProfileChatResponse> {
     const sessionId = normalizeRequiredText(request.session_id)
     const message = normalizeRequiredText(request.message)
@@ -60,6 +62,7 @@ export class ProfileChatService {
 
     const agentResult = await this.getAgentResult({
       message,
+      sourceContext,
       profile: conversation.profile,
       missingRequiredFields: missingRequiredFieldsBeforeMessage,
       conversationMessages: conversation.messages,
@@ -73,7 +76,10 @@ export class ProfileChatService {
 
     conversation.messages = [
       ...conversation.messages,
-      { role: "user", content: message },
+      {
+        role: "user",
+        content: buildConversationUserMessage(message, sourceContext),
+      },
       { role: "assistant", content: reply },
     ]
 
@@ -113,6 +119,17 @@ export class ProfileChatService {
 
     return conversation
   }
+}
+
+function buildConversationUserMessage(
+  message: string,
+  sourceContext: ProfileSourceContext | undefined
+): string {
+  if (sourceContext === undefined) {
+    return message
+  }
+
+  return `${message}\n\nKaynak (${sourceContext.type}: ${sourceContext.label}):\n${sourceContext.content}`
 }
 
 function normalizeRequiredText(value: string): string {

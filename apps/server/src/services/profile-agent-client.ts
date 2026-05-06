@@ -3,6 +3,7 @@ import type { Settings } from "../core/config"
 import type {
   ProfileData,
   ProfilePatch,
+  ProfileSourceContext,
   RequiredProfileField,
 } from "../schemas/profile-chat"
 
@@ -13,6 +14,7 @@ type ProfileConversationMessage = {
 
 export type ProfileAgentRequest = {
   message: string
+  sourceContext?: ProfileSourceContext
   profile: ProfileData
   missingRequiredFields: RequiredProfileField[]
   conversationMessages: ProfileConversationMessage[]
@@ -53,6 +55,7 @@ Kurallar:
 - Sadece geçerli JSON döndür.
 - JSON şeması: {"reply": string, "profile_patch": object}
 - profile_patch içine yalnızca kullanıcının son mesajında açıkça verdiği bilgileri yaz.
+- source_context varsa bu kaynak metnini kullanıcının sağladığı bilgi olarak değerlendir.
 - Bilgi uydurma, tahminle alan doldurma.
 - Kullanıcı eksik zorunlu alanlardan birini verdiyse kaydettiğini söyle.
 - Eksik zorunlu alan varsa reply sonunda tek ve net bir takip sorusu sor.
@@ -179,6 +182,7 @@ function buildGeminiPayload(request: ProfileAgentRequest): object {
               current_profile: request.profile,
               missing_required_fields: request.missingRequiredFields,
               latest_user_message: request.message,
+              source_context: request.sourceContext ?? null,
             }),
           },
         ],
