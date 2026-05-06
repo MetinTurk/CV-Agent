@@ -1,0 +1,7 @@
+interface:
+  display_name: "GitHub Flow"
+  short_description: "CV-Agent için zorunlu issue, branch ve PR akışı"
+  default_prompt: "Use $github-flow to run this CV-Agent task through the mandatory issue, branch, PR, review, merge, and issue-close workflow."
+
+policy:
+  allow_implicit_invocation: true
