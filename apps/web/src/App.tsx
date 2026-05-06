@@ -1,5 +1,6 @@
 // Module: Coordinates authentication state and renders the web application shell.
 import { useEffect, useState, type JSX } from "react"
+import { Navigate, Route, Routes } from "react-router"
 
 import { AuthPage } from "@/components/auth/auth-page"
 import { ProfileChatPage } from "@/components/profile-chat/profile-chat-page"
@@ -79,10 +80,18 @@ export function App(): JSX.Element {
   }
 
   return (
-    <ProfileChatPage
-      token={accessToken ?? ""}
-      user={authState.user}
-      onLogout={handleLogout}
-    />
+    <Routes>
+      <Route
+        path="/"
+        element={
+          <ProfileChatPage
+            token={accessToken ?? ""}
+            user={authState.user}
+            onLogout={handleLogout}
+          />
+        }
+      />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   )
 }
