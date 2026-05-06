@@ -3,6 +3,7 @@ import { useEffect, useState, type JSX } from "react"
 import { Navigate, Route, Routes, useNavigate } from "react-router"
 
 import { AuthPage } from "@/components/auth/auth-page"
+import { JobAnalysisPage } from "@/components/job-analysis/job-analysis-page"
 import { ProfileDashboardPage } from "@/components/profile-dashboard/profile-dashboard-page"
 import { ExtensionInstallPrompt } from "@/components/extension-install/extension-install-prompt"
 import { ProfilePage } from "@/components/profile/profile-page"
@@ -31,6 +32,7 @@ const CHROME_EXTENSION_STORE_URL = "https://chromewebstore.google.com/"
 const AUTH_ROUTE = "/auth"
 const PROFILE_CHAT_ROUTE = "/profile-chat"
 const PROFILE_ROUTE = "/profile"
+const JOB_ANALYSIS_ROUTE = "/job-analysis"
 
 export function App(): JSX.Element {
   const navigate = useNavigate()
@@ -169,6 +171,7 @@ export function App(): JSX.Element {
         element={<Navigate to={PROFILE_CHAT_ROUTE} replace />}
       />
       <Route path={PROFILE_CHAT_ROUTE} element={profileChatPage} />
+      <Route path={JOB_ANALYSIS_ROUTE} element={<JobAnalysisPage />} />
       <Route
         path={PROFILE_ROUTE}
         element={
