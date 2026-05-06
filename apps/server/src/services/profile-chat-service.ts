@@ -1,36 +1,28 @@
 // Module: Manages the profile collection conversation state and profile merging.
+import type { Settings } from "../core/config"
 import type { UserRecord } from "../db/schema"
 import {
   REQUIRED_PROFILE_FIELDS,
   type ProfileChatRequest,
   type ProfileChatResponse,
   type ProfileData,
+  type ProfilePatch,
   type RequiredProfileField,
 } from "../schemas/profile-chat"
-
-const FIELD_LABELS: Record<RequiredProfileField, string> = {
-  full_name: "Ad Soyad",
-  location: "Şehir/Ülke",
-  skills: "Yetenekler",
-  education: "Eğitim/Ortalama",
-}
+import {
+  ProfileAgentClient,
+  type ProfileAgentRequest,
+  type ProfileAgentResult,
+} from "./profile-agent-client"
 
 type ProfileConversationState = {
   messages: Array<{ role: "user" | "assistant"; content: string }>
   profile: ProfileData
 }
 
-type ProfilePatch = Partial<{
-  full_name: string
-  location: string
-  skills: string[]
-  projects: string[]
-  certifications: string[]
-  languages: string[]
-  work_experiences: string[]
-  education: string
-  additional_information: string
-}>
+type ProfileAgent = {
+  generateResponse(request: ProfileAgentRequest): Promise<ProfileAgentResult>
+}
 
 const EMPTY_PROFILE: ProfileData = {
   full_name: null,
@@ -47,17 +39,37 @@ const EMPTY_PROFILE: ProfileData = {
 export class ProfileChatService {
   private readonly conversations = new Map<string, ProfileConversationState>()
 
-  chat(user: UserRecord, request: ProfileChatRequest): ProfileChatResponse {
+  constructor(
+    settings: Settings,
+    private readonly profileAgent: ProfileAgent = new ProfileAgentClient(
+      settings
+    )
+  ) {}
+
+  async chat(
+    user: UserRecord,
+    request: ProfileChatRequest
+  ): Promise<ProfileChatResponse> {
     const sessionId = normalizeRequiredText(request.session_id)
     const message = normalizeRequiredText(request.message)
     const conversationKey = `${user.id}:${sessionId}`
     const conversation = this.getConversation(conversationKey)
+    const missingRequiredFieldsBeforeMessage = getMissingRequiredFields(
+      conversation.profile
+    )
 
-    const patch = extractProfilePatch(message)
+    const agentResult = await this.getAgentResult({
+      message,
+      profile: conversation.profile,
+      missingRequiredFields: missingRequiredFieldsBeforeMessage,
+      conversationMessages: conversation.messages,
+    })
+
+    const patch = agentResult.profilePatch
     conversation.profile = mergeProfile(conversation.profile, patch)
 
     const missingRequiredFields = getMissingRequiredFields(conversation.profile)
-    const reply = buildReply(conversation.profile, missingRequiredFields, patch)
+    const reply = normalizeRequiredText(agentResult.reply)
 
     conversation.messages = [
       ...conversation.messages,
@@ -72,6 +84,12 @@ export class ProfileChatService {
       missing_required_fields: missingRequiredFields,
       is_profile_ready: missingRequiredFields.length === 0,
     }
+  }
+
+  private async getAgentResult(
+    request: ProfileAgentRequest
+  ): Promise<ProfileAgentResult> {
+    return await this.profileAgent.generateResponse(request)
   }
 
   private getConversation(conversationKey: string): ProfileConversationState {
@@ -108,13 +126,6 @@ function cleanText(value: string | undefined): string | null {
 
   const normalizedValue = normalizeRequiredText(value)
   return normalizedValue.length > 0 ? normalizedValue : null
-}
-
-function splitValues(value: string): string[] {
-  return value
-    .split(/[,;\n]/)
-    .map((item) => cleanText(item))
-    .filter((item): item is string => item !== null)
 }
 
 function mergeList(
@@ -174,152 +185,4 @@ function getMissingRequiredFields(
 
     return profile[fieldName] === null
   })
-}
-
-function extractProfilePatch(message: string): ProfilePatch {
-  const patch: ProfilePatch = {}
-  const labeledSegments = extractLabeledSegments(message)
-
-  for (const [label, value] of labeledSegments) {
-    const normalizedLabel = label.toLocaleLowerCase("tr")
-
-    if (/(ad|isim|full.?name)/iu.test(normalizedLabel)) {
-      patch.full_name = value
-    } else if (
-      /(şehir|sehir|ülke|ulke|lokasyon|location|konum)/iu.test(normalizedLabel)
-    ) {
-      patch.location = value
-    } else if (/(yetenek|beceri|skill|teknoloji)/iu.test(normalizedLabel)) {
-      patch.skills = splitValues(value)
-    } else if (/(proje|project)/iu.test(normalizedLabel)) {
-      patch.projects = splitValues(value)
-    } else if (
-      /(sertifika|certificate|certification)/iu.test(normalizedLabel)
-    ) {
-      patch.certifications = splitValues(value)
-    } else if (/(dil|language)/iu.test(normalizedLabel)) {
-      patch.languages = splitValues(value)
-    } else if (/(deneyim|iş|is|experience)/iu.test(normalizedLabel)) {
-      patch.work_experiences = splitValues(value)
-    } else if (
-      /(eğitim|egitim|okul|üniversite|universite|gpa|ortalama)/iu.test(
-        normalizedLabel
-      )
-    ) {
-      patch.education = value
-    }
-  }
-
-  if (Object.keys(patch).length > 0) {
-    return patch
-  }
-
-  return inferPatchFromSentence(message)
-}
-
-function extractLabeledSegments(message: string): Array<[string, string]> {
-  const segments: Array<[string, string]> = []
-  const lines = message.split(/\n|\. /)
-
-  for (const line of lines) {
-    const match = line.match(/^([^:=-]{2,40})[:=-]\s*(.+)$/u)
-    if (match !== null) {
-      segments.push([match[1].trim(), match[2].trim()])
-    }
-  }
-
-  return segments
-}
-
-function inferPatchFromSentence(message: string): ProfilePatch {
-  const lowerMessage = message.toLocaleLowerCase("tr")
-  const patch: ProfilePatch = {}
-
-  const locationMatch = message.match(
-    /(?:istanbul|ankara|izmir|bursa|antalya|adana|konya|turkey|türkiye|almanya|germany|remote|uzaktan)/iu
-  )
-  if (locationMatch !== null) {
-    patch.location = locationMatch[0]
-  }
-
-  const knownSkills = [
-    "typescript",
-    "javascript",
-    "react",
-    "node",
-    "python",
-    "fastapi",
-    "elysia",
-    "postgresql",
-    "drizzle",
-    "sql",
-    "docker",
-    "aws",
-    "git",
-  ]
-  const skills = knownSkills.filter((skill) => lowerMessage.includes(skill))
-  if (skills.length > 0) {
-    patch.skills = skills
-  }
-
-  if (
-    /(üniversite|universite|lisans|yüksek lisans|yuksek lisans|gpa|ortalama)/iu.test(
-      message
-    )
-  ) {
-    patch.education = message
-  }
-
-  if (/(proje|project)/iu.test(message)) {
-    patch.projects = [message]
-  }
-
-  if (/(sertifika|certificate|certification)/iu.test(message)) {
-    patch.certifications = [message]
-  }
-
-  return patch
-}
-
-function buildReply(
-  profile: ProfileData,
-  missingRequiredFields: RequiredProfileField[],
-  patch: ProfilePatch
-): string {
-  const savedAnyField = Object.keys(patch).length > 0
-  const prefix = savedAnyField
-    ? "Kaydettim."
-    : "Mesajını aldım; yapılandırılmış profil alanı olarak net kaydedebilmem için biraz daha açık yazalım."
-
-  if (missingRequiredFields.length === 0) {
-    return `${prefix} Zorunlu profil alanları tamamlandı. İstersen projelerini, sertifikalarını, dillerini ve iş deneyimlerini de ekleyebilirsin.`
-  }
-
-  const missingLabels = missingRequiredFields.map(
-    (fieldName) => FIELD_LABELS[fieldName]
-  )
-  const nextQuestion = getNextQuestion(profile, missingRequiredFields[0])
-
-  return `${prefix} Eksik zorunlu alanlar: ${missingLabels.join(", ")}. ${nextQuestion}`
-}
-
-function getNextQuestion(
-  profile: ProfileData,
-  nextMissingField: RequiredProfileField
-): string {
-  if (nextMissingField === "full_name") {
-    return "Ad soyadını nasıl yazmamı istersin?"
-  }
-
-  if (nextMissingField === "location") {
-    return "Hangi şehir/ülke ya da çalışma lokasyonu bilgisini ekleyelim?"
-  }
-
-  if (nextMissingField === "skills") {
-    return "Başvuru CV’sinde öne çıkarmak istediğin teknik ve profesyonel yetenekleri virgülle yazar mısın?"
-  }
-
-  const locationText =
-    profile.location === null ? "" : ` ${profile.location} bilgisiyle birlikte`
-  return `Eğitim, bölüm, tarih ve varsa not ortalamanı${locationText} paylaşır mısın?`
 }

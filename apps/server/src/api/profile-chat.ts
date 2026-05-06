@@ -11,6 +11,10 @@ import {
   AuthService,
   InvalidTokenError,
 } from "../services/auth-service"
+import {
+  ProfileAgentConfigurationError,
+  ProfileAgentRequestError,
+} from "../services/profile-agent-client"
 import { ProfileChatService } from "../services/profile-chat-service"
 
 export function createProfileChatRoutes(
@@ -28,7 +32,7 @@ export function createProfileChatRoutes(
           headers.authorization
         )
 
-        return profileChatService.chat(currentUser, body)
+        return await profileChatService.chat(currentUser, body)
       } catch (error) {
         if (
           error instanceof AuthenticationRequiredError ||
@@ -36,6 +40,18 @@ export function createProfileChatRoutes(
         ) {
           return status(401, {
             detail: "Invalid or expired token",
+          })
+        }
+
+        if (error instanceof ProfileAgentConfigurationError) {
+          return status(500, {
+            detail: error.message,
+          })
+        }
+
+        if (error instanceof ProfileAgentRequestError) {
+          return status(502, {
+            detail: error.message,
           })
         }
 
@@ -52,6 +68,7 @@ export function createProfileChatRoutes(
       response: {
         200: ProfileChatResponseSchema,
         401: ErrorResponseSchema,
+        502: ErrorResponseSchema,
         500: ErrorResponseSchema,
       },
     }
