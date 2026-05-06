@@ -1,11 +1,13 @@
 // Module: Renders the job analysis result page (yeterli/eksik yönler, uyumluluk puanı, tavsiyeler).
-import type { JSX } from "react"
+import { useState, type JSX } from "react"
 import { useLocation, useNavigate } from "react-router"
 import {
   ArrowLeft,
   Briefcase,
   CheckCircle2,
+  FileText,
   Lightbulb,
+  Loader2,
   MapPin,
   ShieldAlert,
   Sparkles,
@@ -23,6 +25,7 @@ import {
 import { cn } from "@workspace/ui/lib/utils"
 
 import { AppSidebar } from "@/components/app-sidebar"
+import { generateTailoredCv } from "@/lib/cv-generation-api"
 import type { JobAnalysisResponse } from "@/lib/job-analysis-api"
 
 type JobAnalysisLocationState = {
@@ -36,6 +39,36 @@ export function JobAnalysisPage(): JSX.Element {
   const state = (location.state ?? null) as JobAnalysisLocationState | null
   const analysis = state?.analysis ?? null
   const token = state?.token
+  const [isGeneratingCv, setIsGeneratingCv] = useState(false)
+  const [generationError, setGenerationError] = useState<string | null>(null)
+
+  const handleGenerateCv = async (): Promise<void> => {
+    if (analysis === null || token === undefined) {
+      return
+    }
+
+    setIsGeneratingCv(true)
+    setGenerationError(null)
+
+    try {
+      const result = await generateTailoredCv(token, analysis.job_description)
+      navigate("/job-analysis/review", {
+        state: {
+          tailoredCv: result.tailored_cv,
+          analysis,
+          token,
+        },
+      })
+    } catch (error) {
+      setGenerationError(
+        error instanceof Error
+          ? error.message
+          : "CV oluşturulurken bir hata oluştu."
+      )
+    } finally {
+      setIsGeneratingCv(false)
+    }
+  }
 
   if (analysis === null) {
     return (
@@ -83,11 +116,33 @@ export function JobAnalysisPage(): JSX.Element {
                   {jobDescription.title ?? "İş İlanı Analizi"}
                 </CardTitle>
               </div>
-              <Badge variant="secondary" className="rounded-full">
-                <Sparkles data-icon="inline-start" />
-                Yapay Zeka Analizi
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="rounded-full">
+                  <Sparkles data-icon="inline-start" />
+                  Yapay Zeka Analizi
+                </Badge>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleGenerateCv}
+                  disabled={isGeneratingCv || token === undefined}
+                >
+                  {isGeneratingCv ? (
+                    <Loader2 data-icon="inline-start" className="animate-spin" />
+                  ) : (
+                    <FileText data-icon="inline-start" />
+                  )}
+                  {isGeneratingCv
+                    ? "CV oluşturuluyor..."
+                    : "Bu İlana Özel CV Oluştur"}
+                </Button>
+              </div>
             </div>
+            {generationError !== null ? (
+              <p className="rounded-md border border-rose-200 bg-rose-50/60 px-3 py-2 text-xs text-rose-700 dark:border-rose-300/40 dark:bg-rose-300/10 dark:text-rose-300">
+                {generationError}
+              </p>
+            ) : null}
             <p className="text-sm text-muted-foreground">
               <a
                 href={analysis.url}
