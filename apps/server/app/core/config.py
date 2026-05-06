@@ -20,6 +20,8 @@ class Settings(BaseModel):
     cors_allowed_origin_regex: str | None = DEFAULT_DEVELOPMENT_CORS_ORIGIN_REGEX
     google_api_key: str | None = None
     profile_agent_model: str = "google_genai:gemini-3.1-pro-preview"
+    profile_agent_request_timeout_seconds: float = 20.0
+    profile_agent_max_retries: int = 1
 
 
 def parse_csv_env(value: str | None, default: list[str]) -> list[str]:
@@ -59,4 +61,8 @@ def get_settings() -> Settings:
             "PROFILE_AGENT_MODEL",
             "google_genai:gemini-3.1-pro-preview",
         ),
+        profile_agent_request_timeout_seconds=float(
+            getenv("PROFILE_AGENT_REQUEST_TIMEOUT_SECONDS", "20")
+        ),
+        profile_agent_max_retries=int(getenv("PROFILE_AGENT_MAX_RETRIES", "1")),
     )

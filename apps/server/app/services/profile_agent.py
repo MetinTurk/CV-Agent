@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import os
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -15,7 +14,6 @@ from app.schemas.profile_chat import (
     ProfileChatResponse,
     ProfileData,
 )
-
 
 FIELD_LABELS: dict[str, str] = {
     "full_name": "Ad Soyad",
@@ -33,12 +31,22 @@ class ProfileAgentError(RuntimeError):
     pass
 
 
+class ProfileAgentTimeoutError(ProfileAgentError):
+    pass
+
+
 class ProfilePatch(BaseModel):
     full_name: str | None = Field(default=None, description="Kullanıcının ad soyadı.")
     location: str | None = Field(default=None, description="Kullanıcının şehir ve ülke bilgisi.")
     skills: list[str] | None = Field(default=None, description="Teknik ve profesyonel yetenekler.")
-    projects: list[str] | None = Field(default=None, description="Proje adı, rol, teknoloji ve sonuçlar.")
-    certifications: list[str] | None = Field(default=None, description="Sertifika adları ve sağlayıcıları.")
+    projects: list[str] | None = Field(
+        default=None,
+        description="Proje adı, rol, teknoloji ve sonuçlar.",
+    )
+    certifications: list[str] | None = Field(
+        default=None,
+        description="Sertifika adları ve sağlayıcıları.",
+    )
     languages: list[str] | None = Field(default=None, description="Dil ve seviye bilgileri.")
     work_experiences: list[str] | None = Field(default=None, description="İş deneyimi özeti.")
     education: str | None = Field(default=None, description="Okul, bölüm, tarih ve not ortalaması.")
@@ -143,6 +151,33 @@ def _extract_reply(result: dict[str, Any]) -> str:
     raise ProfileAgentError("Agent response did not include an assistant reply.")
 
 
+def _is_timeout_error(error: BaseException) -> bool:
+    current_error: BaseException | None = error
+    seen_errors: set[int] = set()
+
+    while current_error is not None and id(current_error) not in seen_errors:
+        seen_errors.add(id(current_error))
+        error_name = current_error.__class__.__name__.lower()
+        error_module = current_error.__class__.__module__.lower()
+        error_message = str(current_error).lower()
+
+        if isinstance(current_error, TimeoutError):
+            return True
+
+        if "timeout" in error_name or "deadlineexceeded" in error_name:
+            return True
+
+        if "timeout" in error_module:
+            return True
+
+        if "timed out" in error_message or "deadline exceeded" in error_message:
+            return True
+
+        current_error = current_error.__cause__ or current_error.__context__
+
+    return False
+
+
 class ProfileChatService:
     def __init__(self) -> None:
         self._conversations: dict[str, ProfileConversationState] = {}
@@ -156,14 +191,13 @@ class ProfileChatService:
 
         try:
             from deepagents import create_deep_agent
+            from langchain.chat_models import init_chat_model
             from langchain_core.tools import tool
         except ImportError as error:
             raise MissingLLMConfigurationError(
-                "Deep Agents bağımlılıkları eksik. apps/server içinde "
+                "Profil asistanı bağımlılıkları eksik. apps/server içinde "
                 'python -m pip install -e ".[dev]" komutunu çalıştırın.'
             ) from error
-
-        os.environ.setdefault("GOOGLE_API_KEY", settings.google_api_key)
 
         conversation_key = f"{user.id}:{request.session_id}"
         conversation = self._conversations.setdefault(
@@ -226,8 +260,14 @@ class ProfileChatService:
             f"Eksik zorunlu alanlar: {', '.join(missing_labels) if missing_labels else 'Yok'}."
         )
 
+        chat_model = init_chat_model(
+            settings.profile_agent_model,
+            api_key=settings.google_api_key,
+            request_timeout=settings.profile_agent_request_timeout_seconds,
+            retries=settings.profile_agent_max_retries,
+        )
         agent = create_deep_agent(
-            model=settings.profile_agent_model,
+            model=chat_model,
             tools=[save_profile_fields_tool],
             system_prompt=system_prompt,
         )
@@ -239,6 +279,9 @@ class ProfileChatService:
                 config={"configurable": {"thread_id": conversation_key}},
             )
         except Exception as error:
+            if _is_timeout_error(error):
+                raise ProfileAgentTimeoutError(str(error)) from error
+
             raise ProfileAgentError(str(error)) from error
 
         reply = _extract_reply(result)

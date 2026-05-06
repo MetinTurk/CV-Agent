@@ -1,7 +1,6 @@
 # Module: Defines Pydantic contracts for the profile collection chat agent.
 from pydantic import BaseModel, Field, field_validator
 
-
 REQUIRED_PROFILE_FIELDS = ["full_name", "location", "skills", "education"]
 
 
