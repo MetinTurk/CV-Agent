@@ -1,6 +1,6 @@
 ---
 name: github-flow
-description: Use this skill for every CV-Agent development task that changes code, tests, documentation, configuration, UI, API, database behavior, or repository workflow. Enforces the mandatory GitHub Flow: create an issue, create a branch, share the issue link, implement, open a PR, complete Codex and user review, merge, and close the issue.
+description: "Use this skill for every CV-Agent development task that changes code, tests, documentation, configuration, UI, API, database behavior, or repository workflow. Enforces the mandatory GitHub Flow: create an issue, create a branch, share the issue link, implement, open a PR, complete Codex and user review, merge, and close the issue."
 ---
 
 # GitHub Flow
