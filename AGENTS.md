@@ -43,10 +43,11 @@ Bu projenin nihai amaci, kullanicinin mevcut profilini somut bir is ilanina gore
 
 ### Server
 
-- **Python 3.11+**: Server runtime olarak kullanilir.
-- **FastAPI**: HTTP API katmani ve otomatik OpenAPI dokumantasyonu icin kullanilir.
-- **Uvicorn**: ASGI server olarak lokal gelistirme ve servis calistirma icin kullanilir.
-- **Pydantic**: Request/response semalari ve ayar modelleri icin kullanilir.
+- **Bun**: Server runtime ve lokal gelistirme runner'i olarak kullanilir.
+- **ElysiaJS**: HTTP API katmani ve TypeScript-first endpoint mimarisi icin kullanilir.
+- **TypeBox / Elysia `t`**: Request/response semalari ve runtime validation icin kullanilir.
+- **Drizzle ORM**: Tip guvenli veritabani erisimi ve migration uretimi icin kullanilir.
+- **PostgreSQL**: Kalici server veritabani olarak kullanilir.
 
 ### Browser Extension
 
@@ -66,12 +67,17 @@ Bu projenin nihai amaci, kullanicinin mevcut profilini somut bir is ilanina gore
 │   │   ├── package.json
 │   │   └── vite.config.ts
 │   ├── server/
-│   │   ├── app/
+│   │   ├── src/
 │   │   │   ├── api/
 │   │   │   ├── core/
+│   │   │   ├── db/
 │   │   │   ├── schemas/
-│   │   │   └── main.py
-│   │   ├── pyproject.toml
+│   │   │   ├── services/
+│   │   │   ├── app.ts
+│   │   │   └── index.ts
+│   │   ├── drizzle/
+│   │   ├── drizzle.config.ts
+│   │   ├── package.json
 │   │   └── README.md
 │   └── chrome-extension/
 ├── packages/
@@ -103,13 +109,13 @@ Bu projenin nihai amaci, kullanicinin mevcut profilini somut bir is ilanina gore
 
 Bu proje LLM destekli olarak gelistirilecegi icin kodun okunabilir, tahmin edilebilir ve tip guvenli olmasi zorunludur.
 
-- **Strong typing zorunludur**: TypeScript tarafinda `strict` ayarlari korunur; Python tarafinda fonksiyon parametreleri, donus degerleri ve Pydantic semalari acik tiplerle yazilir.
+- **Strong typing zorunludur**: TypeScript tarafinda `strict` ayarlari korunur; server ve web kodunda belirsiz veri icin explicit type, schema veya domain modeli kullanilir.
 - **Implicit `any` kullanilmaz**: TypeScript kodunda belirsiz tipler yerine domain modeli, union type, generic veya explicit interface/type tanimlari kullanilir.
-- **Python veri modelleri Pydantic ile tanimlanir**: API request/response govdeleri ve yapilandirilmis agent/AI ciktilari Pydantic modelleriyle temsil edilir.
-- **Her kod modulu aciklanir**: Her `.ts`, `.tsx` ve `.py` kaynak dosyasinin basinda dosyanin sorumlulugunu anlatan kisa bir yorum satiri bulunur.
+- **Server veri modelleri TypeBox ile tanimlanir**: API request/response govdeleri ve yapilandirilmis agent/AI ciktilari TypeBox/Elysia `t` semalariyla temsil edilir.
+- **Her kod modulu aciklanir**: Her `.ts` ve `.tsx` kaynak dosyasinin basinda dosyanin sorumlulugunu anlatan kisa bir yorum satiri bulunur.
 - **Modul sinirlari net tutulur**: Route, schema, servis, agent, repository ve UI component sorumluluklari ayni dosyada karistirilmaz.
 - **LLM ciktilari dogrulanir**: AI tarafindan uretilen veya parse edilen yapilandirilmis veriler veritabanina yazilmadan ya da UI'a gonderilmeden once tipli semalarla dogrulanir.
-- **Kamuya acik fonksiyonlar tipli olur**: Export edilen TypeScript fonksiyonlari ve FastAPI route handler'lari acik donus tipiyle yazilir.
+- **Kamuya acik fonksiyonlar tipli olur**: Export edilen TypeScript fonksiyonlari acik parametre tipleriyle yazilir; Elysia route handler'larinda schema inference tercih edilir.
 - **İstemci metinleri Türkçe karakterli olur**: Web uygulamasında kullanıcıya gösterilen tüm Türkçe metinler Türkçe karakterlerle yazılır; `Giris`, `Sifre`, `Kayit` gibi ASCII transliterasyonlar kullanılmaz.
 - **React bileşenlerinde shadcn önceliklidir**: React tarafında UI oluştururken mümkün olduğunda önce shadcn/ui bileşenleri kullanılır; özel markup veya custom component yalnızca mevcut shadcn bileşeni ihtiyacı karşılamadığında yazılır.
 
@@ -128,11 +134,9 @@ pnpm format
 Server uygulamasi icin:
 
 ```bash
-cd apps/server
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -e ".[dev]"
-uvicorn app.main:app --reload --host 0.0.0.0 --port 3000
+pnpm --filter server dev
+pnpm --filter server db:generate
+pnpm --filter server db:push
 ```
 
 Web uygulamasi icin:

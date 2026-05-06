@@ -22,15 +22,26 @@ export type ProfileChatResponse = {
 type ProfileChatPayload = {
   message: string
   session_id: string
+  source?: {
+    type: "url"
+    value: string
+  }
+}
+
+type ProfileChatDocumentPayload = {
+  message: string
+  session_id: string
+  document: File
 }
 
 type ApiErrorPayload = {
   detail?: unknown
 }
 
-const API_BASE_URL = (
-  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000/api"
-).replace(/\/$/, "")
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "/api").replace(
+  /\/$/,
+  ""
+)
 
 function isApiErrorPayload(value: unknown): value is ApiErrorPayload {
   return typeof value === "object" && value !== null && "detail" in value
@@ -52,14 +63,62 @@ export async function sendProfileChatMessage(
   token: string,
   payload: ProfileChatPayload
 ): Promise<ProfileChatResponse> {
-  const response = await fetch(`${API_BASE_URL}/profile-chat/message`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  })
+  let response: Response
+
+  try {
+    response = await fetch(`${API_BASE_URL}/profile-chat/message`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    })
+  } catch {
+    throw new Error(
+      "API sunucusuna ulaşılamadı. Lütfen server'ın çalıştığını ve API adresinin doğru olduğunu kontrol edin."
+    )
+  }
+
+  if (!response.ok) {
+    let errorPayload: unknown = null
+
+    try {
+      errorPayload = await response.json()
+    } catch {
+      throw new Error("Profil asistanı isteği tamamlanamadı.")
+    }
+
+    throw new Error(getErrorMessage(errorPayload))
+  }
+
+  return response.json() as Promise<ProfileChatResponse>
+}
+
+export async function sendProfileChatDocument(
+  token: string,
+  payload: ProfileChatDocumentPayload
+): Promise<ProfileChatResponse> {
+  const formData = new FormData()
+  formData.set("message", payload.message)
+  formData.set("session_id", payload.session_id)
+  formData.set("document", payload.document)
+
+  let response: Response
+
+  try {
+    response = await fetch(`${API_BASE_URL}/profile-chat/document`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    })
+  } catch {
+    throw new Error(
+      "API sunucusuna ulaşılamadı. Lütfen server'ın çalıştığını ve API adresinin doğru olduğunu kontrol edin."
+    )
+  }
 
   if (!response.ok) {
     let errorPayload: unknown = null

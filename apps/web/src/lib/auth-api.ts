@@ -44,7 +44,7 @@ type ApiValidationError = {
 }
 
 const API_BASE_URL = (
-  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000/api"
+  import.meta.env.VITE_API_BASE_URL ?? "/api"
 ).replace(/\/$/, "")
 
 const FIELD_LABELS: Record<string, string> = {
@@ -170,11 +170,19 @@ async function request<T>(
     headers.Authorization = `Bearer ${options.token}`
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    method: options.method ?? "GET",
-    headers,
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
-  })
+  let response: Response
+
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      method: options.method ?? "GET",
+      headers,
+      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    })
+  } catch {
+    throw new Error(
+      "API sunucusuna ulaşılamadı. Lütfen server'ın çalıştığını ve API adresinin doğru olduğunu kontrol edin."
+    )
+  }
 
   if (!response.ok) {
     let errorPayload: unknown = null
