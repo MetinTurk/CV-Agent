@@ -109,11 +109,11 @@ export function getSettings(): Settings {
     profileAgentModel: Bun.env.PROFILE_AGENT_MODEL ?? "gemini-3-flash-preview",
     profileAgentRequestTimeoutSeconds: parseNumberEnv(
       Bun.env.PROFILE_AGENT_REQUEST_TIMEOUT_SECONDS,
-      12
+      30
     ),
     profileAgentMaxRetries: parseIntegerEnv(
       Bun.env.PROFILE_AGENT_MAX_RETRIES,
-      0
+      1
     ),
   }
 
