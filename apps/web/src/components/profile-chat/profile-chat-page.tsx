@@ -41,6 +41,7 @@ type ProfileChatPageProps = {
   token: string
   user: AuthUser
   onLogout: () => void
+  onProfileCompleted: (redirectTo: string) => void
 }
 
 const SESSION_ID = "first-login-profile"
@@ -110,6 +111,7 @@ export function ProfileChatPage({
   token,
   user,
   onLogout,
+  onProfileCompleted,
 }: ProfileChatPageProps): JSX.Element {
   const [messages, setMessages] = useState<ChatMessage[]>(() => [
     getInitialMessage(user),
@@ -135,6 +137,10 @@ export function ProfileChatPage({
 
   const applyAgentResponse = (response: ProfileChatResponse): void => {
     appendMessage("assistant", response.reply)
+
+    if (response.is_profile_ready) {
+      onProfileCompleted(response.redirect_to ?? "/profile")
+    }
   }
 
   const submitMessage = async (): Promise<void> => {
@@ -159,6 +165,9 @@ export function ProfileChatPage({
     ) {
       return
     }
+    if (sourceMode === "docx" && selectedDocumentFile === null) {
+      return
+    }
 
     setInputValue("")
     setErrorMessage(null)
@@ -174,24 +183,33 @@ export function ProfileChatPage({
     setIsSending(true)
 
     try {
-      const response =
-        sourceMode === "docx"
-          ? await sendProfileChatDocument(token, {
-              message: effectiveMessage,
-              session_id: SESSION_ID,
-              document: selectedDocumentFile,
-            })
-          : await sendProfileChatMessage(token, {
-              message: effectiveMessage,
-              session_id: SESSION_ID,
-              source:
-                sourceMode === "url"
-                  ? {
-                      type: "url",
-                      value: url,
-                    }
-                  : undefined,
-            })
+      let response: ProfileChatResponse
+
+      if (sourceMode === "docx") {
+        const documentForUpload = selectedDocumentFile
+        if (documentForUpload === null) {
+          return
+        }
+
+        response = await sendProfileChatDocument(token, {
+          message: effectiveMessage,
+          session_id: SESSION_ID,
+          document: documentForUpload,
+        })
+      } else {
+        response = await sendProfileChatMessage(token, {
+          message: effectiveMessage,
+          session_id: SESSION_ID,
+          source:
+            sourceMode === "url"
+              ? {
+                  type: "url",
+                  value: url,
+                }
+              : undefined,
+        })
+      }
+
       applyAgentResponse(response)
     } catch (error) {
       setErrorMessage(

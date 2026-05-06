@@ -4,16 +4,23 @@ import { Elysia } from "elysia"
 
 import { createAuthRoutes } from "./api/auth"
 import { createHealthRoutes } from "./api/health"
+import { createProfileRoutes } from "./api/profile"
 import { createProfileChatRoutes } from "./api/profile-chat"
 import { getCorsOrigins, type Settings } from "./core/config"
+import { ProfileRepository } from "./db/repositories/profiles"
 import { UserRepository } from "./db/repositories/users"
 import { AuthService } from "./services/auth-service"
 import { ProfileChatService } from "./services/profile-chat-service"
 
 export function createApp(settings: Settings) {
   const userRepository = new UserRepository()
+  const profileRepository = new ProfileRepository()
   const authService = new AuthService(userRepository, settings)
-  const profileChatService = new ProfileChatService(settings)
+  const profileChatService = new ProfileChatService(
+    settings,
+    undefined,
+    profileRepository
+  )
 
   return new Elysia()
     .use(
@@ -55,6 +62,7 @@ export function createApp(settings: Settings) {
       api
         .use(createAuthRoutes(authService))
         .use(createHealthRoutes(settings))
+        .use(createProfileRoutes(authService, profileRepository))
         .use(createProfileChatRoutes(authService, profileChatService))
     )
 }

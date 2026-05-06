@@ -17,6 +17,7 @@ export type ProfileChatResponse = {
   profile: ProfileData
   missing_required_fields: string[]
   is_profile_ready: boolean
+  redirect_to: string | null
 }
 
 type ProfileChatPayload = {
