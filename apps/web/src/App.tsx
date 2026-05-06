@@ -3,6 +3,7 @@ import { useEffect, useState, type JSX } from "react"
 import { Navigate, Route, Routes, useNavigate } from "react-router"
 
 import { AuthPage } from "@/components/auth/auth-page"
+import { CvReviewPage } from "@/components/job-analysis/cv-review-page"
 import { JobAnalysisPage } from "@/components/job-analysis/job-analysis-page"
 import { ProfileDashboardPage } from "@/components/profile-dashboard/profile-dashboard-page"
 import { ExtensionInstallPrompt } from "@/components/extension-install/extension-install-prompt"
@@ -33,6 +34,7 @@ const AUTH_ROUTE = "/auth"
 const PROFILE_CHAT_ROUTE = "/profile-chat"
 const PROFILE_ROUTE = "/profile"
 const JOB_ANALYSIS_ROUTE = "/job-analysis"
+const CV_REVIEW_ROUTE = "/job-analysis/review"
 
 export function App(): JSX.Element {
   const navigate = useNavigate()
@@ -172,6 +174,7 @@ export function App(): JSX.Element {
       />
       <Route path={PROFILE_CHAT_ROUTE} element={profileChatPage} />
       <Route path={JOB_ANALYSIS_ROUTE} element={<JobAnalysisPage />} />
+      <Route path={CV_REVIEW_ROUTE} element={<CvReviewPage />} />
       <Route
         path={PROFILE_ROUTE}
         element={
