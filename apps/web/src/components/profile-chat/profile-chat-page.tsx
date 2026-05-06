@@ -174,24 +174,32 @@ export function ProfileChatPage({
     setIsSending(true)
 
     try {
-      const response =
-        sourceMode === "docx"
-          ? await sendProfileChatDocument(token, {
-              message: effectiveMessage,
-              session_id: SESSION_ID,
-              document: selectedDocumentFile,
-            })
-          : await sendProfileChatMessage(token, {
-              message: effectiveMessage,
-              session_id: SESSION_ID,
-              source:
-                sourceMode === "url"
-                  ? {
-                      type: "url",
-                      value: url,
-                    }
-                  : undefined,
-            })
+      let response: ProfileChatResponse
+
+      if (sourceMode === "docx") {
+        if (selectedDocumentFile === null) {
+          return
+        }
+
+        response = await sendProfileChatDocument(token, {
+          message: effectiveMessage,
+          session_id: SESSION_ID,
+          document: selectedDocumentFile,
+        })
+      } else {
+        response = await sendProfileChatMessage(token, {
+          message: effectiveMessage,
+          session_id: SESSION_ID,
+          source:
+            sourceMode === "url"
+              ? {
+                  type: "url",
+                  value: url,
+                }
+              : undefined,
+        })
+      }
+
       applyAgentResponse(response)
     } catch (error) {
       setErrorMessage(

@@ -1,11 +1,11 @@
-// Module: Renders the authenticated application sidebar navigation.
+// Module: Renders the authenticated career dashboard sidebar navigation.
 import type { JSX } from "react"
 import {
-  BarChart3,
   Bot,
-  GraduationCap,
-  MessageCircle,
+  BriefcaseBusiness,
+  History,
   PlusCircle,
+  Search,
   UserRound,
   type LucideIcon,
 } from "lucide-react"
@@ -18,7 +18,10 @@ type SidebarNavItem = {
   href: string
   label: string
   icon: LucideIcon
-  isActive?: boolean
+}
+
+type AppSidebarProps = {
+  activeHref?: string
 }
 
 const sidebarNavItems: SidebarNavItem[] = [
@@ -26,53 +29,55 @@ const sidebarNavItems: SidebarNavItem[] = [
     href: "#profilim",
     label: "Profilim",
     icon: UserRound,
-    isActive: true,
+  },
+  {
+    href: "#gecmis-basvurular",
+    label: "Geçmiş Başvurular",
+    icon: History,
   },
   {
     href: "#is-analizi",
     label: "İş Analizi",
-    icon: BarChart3,
-  },
-  {
-    href: "#gelisim-merkezi",
-    label: "Gelişim Merkezi",
-    icon: GraduationCap,
+    icon: Search,
   },
   {
     href: "#ai-kariyer-sohbeti",
     label: "AI Kariyer Sohbeti",
-    icon: MessageCircle,
+    icon: Bot,
   },
 ]
 
-export function AppSidebar(): JSX.Element {
+export function AppSidebar({
+  activeHref = "#profilim",
+}: AppSidebarProps): JSX.Element {
   return (
     <aside
-      className="hidden min-h-svh w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground lg:flex"
+      className="hidden min-h-svh w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex"
       aria-label="Ana menü"
     >
-      <div className="flex h-16 items-center gap-3 px-4">
+      <div className="flex h-[4.75rem] items-center gap-3 px-4">
         <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-          <Bot />
+          <BriefcaseBusiness />
         </div>
-        <a
-          href="#profilim"
-          className="min-w-0"
-        >
+        <a href="#profilim" className="min-w-0">
           <span className="block truncate text-base font-semibold tracking-normal">
-            Kariyer Asistanı
+            Kariyer Pilotu
           </span>
           <span className="block truncate text-xs text-muted-foreground">
-            Yapay Zeka Destekli
+            Yapay Zeka Kariyer Stratejisi
           </span>
         </a>
       </div>
 
       <Separator />
 
-      <nav className="flex flex-1 flex-col gap-1 px-3 py-4" aria-label="Sayfa bölümleri">
+      <nav
+        className="flex flex-1 flex-col gap-1 px-3 py-4"
+        aria-label="Sayfa bölümleri"
+      >
         {sidebarNavItems.map((item) => {
           const Icon = item.icon
+          const isActive = item.href === activeHref
 
           return (
             <Button
@@ -82,8 +87,8 @@ export function AppSidebar(): JSX.Element {
               size="lg"
               className={cn(
                 "relative w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                item.isActive &&
-                  "bg-sidebar-accent text-sidebar-primary after:absolute after:right-1.5 after:top-1/2 after:h-5 after:w-1 after:-translate-y-1/2 after:rounded-full after:bg-sidebar-primary"
+                isActive &&
+                  "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary hover:text-sidebar-primary-foreground"
               )}
             >
               <a href={item.href} title={item.label}>

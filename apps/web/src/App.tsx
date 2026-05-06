@@ -3,7 +3,7 @@ import { useEffect, useState, type JSX } from "react"
 import { Navigate, Route, Routes } from "react-router"
 
 import { AuthPage } from "@/components/auth/auth-page"
-import { ProfileDashboardPage } from "@/components/profile-dashboard/profile-dashboard-page"
+import { CareerDashboardPage } from "@/components/career-dashboard/career-dashboard-page"
 import { ExtensionInstallPrompt } from "@/components/extension-install/extension-install-prompt"
 import { ProfileChatPage } from "@/components/profile-chat/profile-chat-page"
 import {
@@ -30,6 +30,7 @@ const CHROME_EXTENSION_STORE_URL = "https://chromewebstore.google.com/"
 
 export function App(): JSX.Element {
   const [initialToken] = useState<string | null>(() => getStoredAccessToken())
+  const [accessToken, setAccessToken] = useState<string | null>(initialToken)
   const [authState, setAuthState] = useState<AuthState>(() =>
     initialToken === null ? { status: "guest" } : { status: "checking" }
   )
@@ -56,6 +57,7 @@ export function App(): JSX.Element {
       })
       .catch(() => {
         clearAccessToken()
+        setAccessToken(null)
         if (isActive) {
           setAuthState({ status: "guest" })
         }
@@ -121,29 +123,39 @@ export function App(): JSX.Element {
     return <AuthPage onAuthenticated={handleAuthenticated} />
   }
 
-    return (
+  const extensionPrompt =
+    extensionStatus === "missing" && !isExtensionPromptDismissed ? (
+      <ExtensionInstallPrompt
+        onInstallClick={handleInstallExtension}
+        onRemindLater={() => setIsExtensionPromptDismissed(true)}
+      />
+    ) : null
+
+  return (
     <Routes>
       <Route
         path="/"
         element={
           <>
-            <ProfileChatPage
-              token={accessToken ?? ""}
+            <CareerDashboardPage
               user={authState.user}
               onLogout={handleLogout}
             />
-            {extensionStatus === "missing" && !isExtensionPromptDismissed ? (
-              <ExtensionInstallPrompt
-                onInstallClick={handleInstallExtension}
-                onRemindLater={() => setIsExtensionPromptDismissed(true)}
-              />
-            ) : null}
+            {extensionPrompt}
           </>
+        }
+      />
+      <Route
+        path="/profil-sohbeti"
+        element={
+          <ProfileChatPage
+            token={accessToken ?? ""}
+            user={authState.user}
+            onLogout={handleLogout}
+          />
         }
       />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
-}
-
 }
