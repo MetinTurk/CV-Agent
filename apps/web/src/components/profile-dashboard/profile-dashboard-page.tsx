@@ -1,10 +1,12 @@
 // Module: Renders the static profile dashboard for authenticated CV Agent users.
-import { type JSX } from "react"
+import { useState, type JSX } from "react"
 import {
   ArrowUpRight,
   Bell,
   Download,
   Eye,
+  Info,
+  Link,
   MessageCircle,
   LogOut,
   Pencil,
@@ -12,6 +14,7 @@ import {
   Sparkles,
   Search,
   Settings,
+  X,
 } from "lucide-react"
 
 import { Badge } from "@workspace/ui/components/badge"
@@ -24,6 +27,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@workspace/ui/components/card"
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@workspace/ui/components/field"
 import { Input } from "@workspace/ui/components/input"
 import { Separator } from "@workspace/ui/components/separator"
 import { cn } from "@workspace/ui/lib/utils"
@@ -54,7 +63,7 @@ function DashboardHeader({
   return (
     <header className="sticky top-0 z-10 flex min-h-16 flex-col gap-3 border-b border-border bg-background/95 px-4 py-3 backdrop-blur md:px-6 lg:flex-row lg:items-center lg:justify-between">
       <div className="relative w-full lg:max-w-xl">
-        <Search className="pointer-events-none absolute left-3 top-1/2 text-muted-foreground" />
+        <Search className="pointer-events-none absolute top-1/2 left-3 text-muted-foreground" />
         <Input
           type="search"
           placeholder="Ara..."
@@ -73,7 +82,7 @@ function DashboardHeader({
             className="relative"
           >
             <Bell />
-            <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-destructive" />
+            <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-destructive" />
           </Button>
           <Button
             type="button"
@@ -128,10 +137,7 @@ function ProfileTimeline({ items }: { items: TimelineItem[] }): JSX.Element {
           <div className="min-w-0 pb-4">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
               <p
-                className={cn(
-                  "font-medium",
-                  item.isCurrent && "text-primary"
-                )}
+                className={cn("font-medium", item.isCurrent && "text-primary")}
               >
                 {item.role} | {item.company}
               </p>
@@ -257,9 +263,13 @@ function ProfileContactCard(): JSX.Element {
 function SectionHeader({
   title,
   description,
+  actionLabel = "Ekle",
+  onAddClick,
 }: {
   title: string
   description: string
+  actionLabel?: string
+  onAddClick?: () => void
 }): JSX.Element {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -273,9 +283,9 @@ function SectionHeader({
         <Button type="button" variant="outline" size="sm">
           Tümünü Gör
         </Button>
-        <Button type="button" size="sm">
+        <Button type="button" size="sm" onClick={onAddClick}>
           <Plus data-icon="inline-start" />
-          Ekle
+          {actionLabel}
         </Button>
       </div>
     </div>
@@ -312,19 +322,114 @@ function ProjectCard({ project }: { project: ProjectItem }): JSX.Element {
   )
 }
 
-function ProjectsSection(): JSX.Element {
+function AddProjectModal({ onClose }: { onClose: () => void }): JSX.Element {
   return (
-    <section id="is-analizi" className="flex flex-col gap-4">
-      <SectionHeader
-        title="Projeler"
-        description="Başvuru hikayesini güçlendiren seçili çalışma örnekleri."
-      />
-      <div className="grid gap-4 lg:grid-cols-2">
-        {profileDashboardMock.projects.map((project) => (
-          <ProjectCard key={project.title} project={project} />
-        ))}
-      </div>
-    </section>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 p-4 backdrop-blur-sm">
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="add-project-title"
+        aria-describedby="add-project-description"
+        className="max-h-[calc(100svh-2rem)] w-full max-w-[700px] overflow-hidden rounded-lg border border-border bg-card text-card-foreground shadow-xl"
+      >
+        <header className="flex items-center justify-between gap-4 border-b border-border px-5 py-4 sm:px-8">
+          <h2
+            id="add-project-title"
+            className="text-2xl font-semibold tracking-normal"
+          >
+            Yeni Proje Ekle
+          </h2>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label="Pencereyi kapat"
+            onClick={onClose}
+          >
+            <X />
+          </Button>
+        </header>
+
+        <div className="flex flex-col gap-7 px-5 py-6 sm:px-8">
+          <p
+            id="add-project-description"
+            className="max-w-[620px] text-base leading-7 text-muted-foreground"
+          >
+            GitHub, Portfolyo veya canlı proje bağlantınızı buraya ekleyerek
+            profilinizi güçlendirin. Yapay zeka, bağlantıdaki içeriği analiz
+            ederek projenizi otomatik olarak detaylandıracaktır.
+          </p>
+
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="project-url">Proje Bağlantısı</FieldLabel>
+              <div className="relative">
+                <Link className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="project-url"
+                  type="url"
+                  placeholder="https://github.com/kullanici/proje"
+                  className="h-16 pl-11 text-base"
+                />
+              </div>
+              <FieldDescription className="flex items-start gap-2 text-xs">
+                <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+                <span>
+                  Desteklenen platformlar: GitHub, GitLab, Behance ve özel
+                  portfolyo siteleri.
+                </span>
+              </FieldDescription>
+            </Field>
+          </FieldGroup>
+        </div>
+
+        <footer className="flex flex-col-reverse gap-3 border-t border-border bg-muted/30 px-5 py-4 sm:flex-row sm:justify-end sm:px-8">
+          <Button
+            type="button"
+            variant="ghost"
+            size="lg"
+            onClick={onClose}
+            className="h-12 px-6"
+          >
+            İptal
+          </Button>
+          <Button
+            type="button"
+            size="lg"
+            className="h-12 px-7 whitespace-normal"
+          >
+            <Sparkles data-icon="inline-start" />
+            Ekle ve Analiz Et
+          </Button>
+        </footer>
+      </section>
+    </div>
+  )
+}
+
+function ProjectsSection(): JSX.Element {
+  const [isAddProjectOpen, setIsAddProjectOpen] = useState(false)
+
+  return (
+    <>
+      <section id="is-analizi" className="flex flex-col gap-4">
+        <SectionHeader
+          title="Projeler"
+          description="Başvuru hikayesini güçlendiren seçili çalışma örnekleri."
+          actionLabel="Proje Ekle"
+          onAddClick={() => setIsAddProjectOpen(true)}
+        />
+        <div className="grid gap-4 lg:grid-cols-2">
+          {profileDashboardMock.projects.map((project) => (
+            <ProjectCard key={project.title} project={project} />
+          ))}
+        </div>
+      </section>
+
+      {isAddProjectOpen ? (
+        <AddProjectModal onClose={() => setIsAddProjectOpen(false)} />
+      ) : null}
+    </>
   )
 }
 
