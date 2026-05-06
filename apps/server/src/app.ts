@@ -4,12 +4,14 @@ import { Elysia } from "elysia"
 
 import { createAuthRoutes } from "./api/auth"
 import { createHealthRoutes } from "./api/health"
+import { createJobAnalysisRoutes } from "./api/job-analysis"
 import { createProfileRoutes } from "./api/profile"
 import { createProfileChatRoutes } from "./api/profile-chat"
 import { getCorsOrigins, type Settings } from "./core/config"
 import { ProfileRepository } from "./db/repositories/profiles"
 import { UserRepository } from "./db/repositories/users"
 import { AuthService } from "./services/auth-service"
+import { JobAnalysisService } from "./services/job-analysis-service"
 import { ProfileChatService } from "./services/profile-chat-service"
 
 export function createApp(settings: Settings) {
@@ -18,6 +20,13 @@ export function createApp(settings: Settings) {
   const authService = new AuthService(userRepository, settings)
   const profileChatService = new ProfileChatService(
     settings,
+    undefined,
+    profileRepository
+  )
+  const jobAnalysisService = new JobAnalysisService(
+    settings,
+    undefined,
+    undefined,
     undefined,
     profileRepository
   )
@@ -64,5 +73,6 @@ export function createApp(settings: Settings) {
         .use(createHealthRoutes(settings))
         .use(createProfileRoutes(authService, profileRepository))
         .use(createProfileChatRoutes(authService, profileChatService))
+        .use(createJobAnalysisRoutes(authService, jobAnalysisService))
     )
 }

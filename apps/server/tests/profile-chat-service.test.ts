@@ -17,10 +17,10 @@ const testSettings: Settings = {
   accessTokenExpireMinutes: 60,
   corsAllowedOrigins: ["http://localhost:5173"],
   corsAllowedOriginRegex: null,
-  googleApiKey: "test-google-api-key",
-  profileAgentModel: "gemini-3-flash-preview",
-  profileAgentRequestTimeoutSeconds: 20,
-  profileAgentMaxRetries: 1,
+  groqApiKey: "test-groq-api-key",
+  agentModel: "openai/gpt-oss-120b",
+  agentRequestTimeoutSeconds: 20,
+  agentMaxRetries: 1,
 }
 
 const testUser: UserRecord = {

@@ -1,4 +1,4 @@
-// Module: Calls the Gemini profile collection agent and validates its JSON reply.
+// Module: Calls the Groq profile collection agent (gpt-oss) and validates its JSON reply.
 import type { Settings } from "../core/config"
 import type {
   ProfileData,
@@ -25,18 +25,19 @@ export type ProfileAgentResult = {
   profilePatch: ProfilePatch
 }
 
-type GeminiTextPart = {
-  text?: unknown
+type GroqMessage = {
+  role: "system" | "user" | "assistant"
+  content: string
 }
 
-type GeminiCandidate = {
-  content?: {
-    parts?: GeminiTextPart[]
+type GroqChoice = {
+  message?: {
+    content?: unknown
   }
 }
 
-type GeminiResponse = {
-  candidates?: GeminiCandidate[]
+type GroqResponse = {
+  choices?: GroqChoice[]
   error?: {
     message?: unknown
   }
@@ -46,6 +47,9 @@ type ProfileAgentJson = {
   reply?: unknown
   profile_patch?: unknown
 }
+
+const GROQ_CHAT_COMPLETIONS_URL =
+  "https://api.groq.com/openai/v1/chat/completions"
 
 const PROFILE_AGENT_SYSTEM_PROMPT = `
 Sen CV Agent uygulamasının Profil Oluşturma Asistanısın.
@@ -83,16 +87,16 @@ export class ProfileAgentClient {
   async generateResponse(
     request: ProfileAgentRequest
   ): Promise<ProfileAgentResult> {
-    if (this.settings.googleApiKey === null) {
+    if (this.settings.groqApiKey === null) {
       throw new ProfileAgentConfigurationError(
-        "GOOGLE_API_KEY tanımlı olmadığı için profil asistanı LLM isteği gönderemiyor."
+        "GROQ_API_KEY tanımlı olmadığı için profil asistanı LLM isteği gönderemiyor."
       )
     }
 
     const response = await this.fetchWithRetries(request)
 
     try {
-      const text = extractGeminiText(response)
+      const text = extractGroqText(response)
       return parseProfileAgentResult(text)
     } catch (error) {
       throw new ProfileAgentRequestError(
@@ -104,8 +108,8 @@ export class ProfileAgentClient {
 
   private async fetchWithRetries(
     request: ProfileAgentRequest
-  ): Promise<GeminiResponse> {
-    const attempts = Math.max(1, this.settings.profileAgentMaxRetries + 1)
+  ): Promise<GroqResponse> {
+    const attempts = Math.max(1, this.settings.agentMaxRetries + 1)
     let lastError: unknown = null
 
     for (let attempt = 1; attempt <= attempts; attempt += 1) {
@@ -113,6 +117,10 @@ export class ProfileAgentClient {
         return await this.fetchOnce(request)
       } catch (error) {
         lastError = error
+        console.error(
+          `[profile-agent] attempt ${attempt}/${attempts} failed:`,
+          error instanceof Error ? error.message : error
+        )
       }
     }
 
@@ -124,30 +132,35 @@ export class ProfileAgentClient {
 
   private async fetchOnce(
     request: ProfileAgentRequest
-  ): Promise<GeminiResponse> {
+  ): Promise<GroqResponse> {
     const controller = new AbortController()
     const timeout = setTimeout(
       () => controller.abort(),
-      this.settings.profileAgentRequestTimeoutSeconds * 1000
+      this.settings.agentRequestTimeoutSeconds * 1000
     )
 
     try {
-      const response = await fetch(this.buildEndpointUrl(), {
+      const response = await fetch(GROQ_CHAT_COMPLETIONS_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${this.settings.groqApiKey ?? ""}`,
         },
-        body: JSON.stringify(buildGeminiPayload(request)),
+        body: JSON.stringify(buildGroqPayload(this.settings.agentModel, request)),
         signal: controller.signal,
       })
 
-      const payload = (await response.json()) as GeminiResponse
+      const payload = (await response.json()) as GroqResponse
 
       if (!response.ok) {
         const errorMessage =
           typeof payload.error?.message === "string"
             ? payload.error.message
             : "Profil asistanı LLM isteği başarısız oldu."
+        console.error(
+          `[profile-agent] Groq ${response.status}:`,
+          JSON.stringify(payload).slice(0, 1000)
+        )
         throw new ProfileAgentRequestError(errorMessage)
       }
 
@@ -156,60 +169,41 @@ export class ProfileAgentClient {
       clearTimeout(timeout)
     }
   }
-
-  private buildEndpointUrl(): string {
-    const model = normalizeGeminiModel(this.settings.profileAgentModel)
-    const encodedModel = encodeURIComponent(model)
-    const encodedApiKey = encodeURIComponent(this.settings.googleApiKey ?? "")
-
-    return `https://generativelanguage.googleapis.com/v1beta/models/${encodedModel}:generateContent?key=${encodedApiKey}`
-  }
 }
 
-function normalizeGeminiModel(model: string): string {
-  return model.replace(/^google_genai:/u, "")
-}
-
-function buildGeminiPayload(request: ProfileAgentRequest): object {
+function buildGroqPayload(model: string, request: ProfileAgentRequest): object {
   const recentMessages = request.conversationMessages.slice(-8)
 
+  const messages: GroqMessage[] = [
+    { role: "system", content: PROFILE_AGENT_SYSTEM_PROMPT },
+    ...recentMessages.map<GroqMessage>((message) => ({
+      role: message.role,
+      content: message.content,
+    })),
+    {
+      role: "user",
+      content: JSON.stringify({
+        current_profile: request.profile,
+        missing_required_fields: request.missingRequiredFields,
+        latest_user_message: request.message,
+        source_context: request.sourceContext ?? null,
+      }),
+    },
+  ]
+
   return {
-    systemInstruction: {
-      parts: [{ text: PROFILE_AGENT_SYSTEM_PROMPT }],
-    },
-    contents: [
-      ...recentMessages.map((message) => ({
-        role: message.role === "assistant" ? "model" : "user",
-        parts: [{ text: message.content }],
-      })),
-      {
-        role: "user",
-        parts: [
-          {
-            text: JSON.stringify({
-              current_profile: request.profile,
-              missing_required_fields: request.missingRequiredFields,
-              latest_user_message: request.message,
-              source_context: request.sourceContext ?? null,
-            }),
-          },
-        ],
-      },
-    ],
-    generationConfig: {
-      temperature: 0.2,
-      responseMimeType: "application/json",
-    },
+    model,
+    messages,
+    temperature: 0.2,
+    response_format: { type: "json_object" },
   }
 }
 
-function extractGeminiText(response: GeminiResponse): string {
-  const text = response.candidates?.[0]?.content?.parts
-    ?.map((part) => (typeof part.text === "string" ? part.text : ""))
-    .join("")
-    .trim()
+function extractGroqText(response: GroqResponse): string {
+  const content = response.choices?.[0]?.message?.content
+  const text = typeof content === "string" ? content.trim() : ""
 
-  if (text === undefined || text.length === 0) {
+  if (text.length === 0) {
     throw new Error("Profil asistanı LLM yanıtı boş döndü.")
   }
 

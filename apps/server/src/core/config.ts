@@ -16,10 +16,10 @@ export type Settings = {
   accessTokenExpireMinutes: number
   corsAllowedOrigins: string[]
   corsAllowedOriginRegex: string | null
-  googleApiKey: string | null
-  profileAgentModel: string
-  profileAgentRequestTimeoutSeconds: number
-  profileAgentMaxRetries: number
+  groqApiKey: string | null
+  agentModel: string
+  agentRequestTimeoutSeconds: number
+  agentMaxRetries: number
 }
 
 let cachedSettings: Settings | null = null
@@ -105,16 +105,13 @@ export function getSettings(): Settings {
     ),
     corsAllowedOriginRegex:
       Bun.env.CORS_ALLOWED_ORIGIN_REGEX ?? defaultCorsAllowedOriginRegex,
-    googleApiKey: optionalEnv(Bun.env.GOOGLE_API_KEY),
-    profileAgentModel: Bun.env.PROFILE_AGENT_MODEL ?? "gemini-3-flash-preview",
-    profileAgentRequestTimeoutSeconds: parseNumberEnv(
-      Bun.env.PROFILE_AGENT_REQUEST_TIMEOUT_SECONDS,
+    groqApiKey: optionalEnv(Bun.env.GROQ_API_KEY),
+    agentModel: Bun.env.AGENT_MODEL ?? "openai/gpt-oss-120b",
+    agentRequestTimeoutSeconds: parseNumberEnv(
+      Bun.env.AGENT_REQUEST_TIMEOUT_SECONDS,
       30
     ),
-    profileAgentMaxRetries: parseIntegerEnv(
-      Bun.env.PROFILE_AGENT_MAX_RETRIES,
-      1
-    ),
+    agentMaxRetries: parseIntegerEnv(Bun.env.AGENT_MAX_RETRIES, 1),
   }
 
   return cachedSettings
