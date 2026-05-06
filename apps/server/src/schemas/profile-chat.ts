@@ -46,6 +46,7 @@ export const ProfileChatResponseSchema = t.Object({
   profile: ProfileDataSchema,
   missing_required_fields: t.Array(t.String()),
   is_profile_ready: t.Boolean(),
+  redirect_to: t.Nullable(t.String()),
 })
 
 export type RequiredProfileField = (typeof REQUIRED_PROFILE_FIELDS)[number]

@@ -1,5 +1,6 @@
 // Module: Manages the profile collection conversation state and profile merging.
 import type { Settings } from "../core/config"
+import { ProfileRepository } from "../db/repositories/profiles"
 import type { UserRecord } from "../db/schema"
 import {
   REQUIRED_PROFILE_FIELDS,
@@ -25,6 +26,10 @@ type ProfileAgent = {
   generateResponse(request: ProfileAgentRequest): Promise<ProfileAgentResult>
 }
 
+type ProfileStore = {
+  upsertForUser(userId: string, profileData: ProfileData): Promise<unknown>
+}
+
 const EMPTY_PROFILE: ProfileData = {
   full_name: null,
   location: null,
@@ -44,7 +49,8 @@ export class ProfileChatService {
     settings: Settings,
     private readonly profileAgent: ProfileAgent = new ProfileAgentClient(
       settings
-    )
+    ),
+    private readonly profileStore: ProfileStore = new ProfileRepository()
   ) {}
 
   async chat(
@@ -73,6 +79,7 @@ export class ProfileChatService {
 
     const missingRequiredFields = getMissingRequiredFields(conversation.profile)
     const reply = normalizeRequiredText(agentResult.reply)
+    const isProfileReady = missingRequiredFields.length === 0
 
     conversation.messages = [
       ...conversation.messages,
@@ -83,12 +90,17 @@ export class ProfileChatService {
       { role: "assistant", content: reply },
     ]
 
+    if (isProfileReady) {
+      await this.profileStore.upsertForUser(user.id, conversation.profile)
+    }
+
     return {
       reply,
       session_id: sessionId,
       profile: conversation.profile,
       missing_required_fields: missingRequiredFields,
-      is_profile_ready: missingRequiredFields.length === 0,
+      is_profile_ready: isProfileReady,
+      redirect_to: isProfileReady ? "/profile" : null,
     }
   }
 

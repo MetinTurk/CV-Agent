@@ -8,6 +8,13 @@
       "when": 1778060817135,
       "tag": "0000_sudden_piledriver",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1778065827755,
+      "tag": "0001_dizzy_bloodaxe",
+      "breakpoints": true
     }
   ]
 }

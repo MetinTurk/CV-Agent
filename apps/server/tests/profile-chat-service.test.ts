@@ -34,20 +34,29 @@ const testUser: UserRecord = {
 
 test("profile chat sends user messages to the LLM agent", async () => {
   const agentRequests: ProfileAgentRequest[] = []
-  const service = new ProfileChatService(testSettings, {
-    async generateResponse(request) {
-      agentRequests.push(request)
+  const savedProfiles: unknown[] = []
+  const service = new ProfileChatService(
+    testSettings,
+    {
+      async generateResponse(request) {
+        agentRequests.push(request)
 
-      return {
-        reply: "Kaydettim. Eğitim bilgini paylaşır mısın?",
-        profilePatch: {
-          full_name: "Ayşe Yılmaz",
-          location: "İstanbul",
-          skills: ["React", "TypeScript"],
-        },
-      }
+        return {
+          reply: "Kaydettim. Eğitim bilgini paylaşır mısın?",
+          profilePatch: {
+            full_name: "Ayşe Yılmaz",
+            location: "İstanbul",
+            skills: ["React", "TypeScript"],
+          },
+        }
+      },
     },
-  })
+    {
+      async upsertForUser(_userId, profileData) {
+        savedProfiles.push(profileData)
+      },
+    }
+  )
 
   const response = await service.chat(testUser, {
     message: "Ben Ayşe Yılmaz, İstanbul'dayım. React ve TypeScript biliyorum.",
@@ -64,6 +73,8 @@ test("profile chat sends user messages to the LLM agent", async () => {
   expect(response.profile.skills).toEqual(["React", "TypeScript"])
   expect(response.missing_required_fields).toEqual(["education"])
   expect(response.is_profile_ready).toBe(false)
+  expect(response.redirect_to).toBe(null)
+  expect(savedProfiles).toHaveLength(0)
 })
 
 test("profile chat forwards extracted source context to the LLM agent", async () => {
@@ -116,4 +127,45 @@ test("profile chat does not generate a local fallback response when LLM fails", 
       session_id: "first-login-profile",
     })
   ).rejects.toThrow("LLM unavailable")
+})
+
+test("profile chat saves profile and returns redirect when required fields are complete", async () => {
+  const savedProfiles: Array<{ userId: string; profileData: unknown }> = []
+  const service = new ProfileChatService(
+    testSettings,
+    {
+      async generateResponse() {
+        return {
+          reply: "Profilin hazır. Profil sayfana yönlendiriyorum.",
+          profilePatch: {
+            full_name: "Ayşe Yılmaz",
+            location: "İstanbul",
+            skills: ["React", "TypeScript"],
+            education: "Boğaziçi Üniversitesi Bilgisayar Mühendisliği",
+          },
+        }
+      },
+    },
+    {
+      async upsertForUser(userId, profileData) {
+        savedProfiles.push({ userId, profileData })
+      },
+    }
+  )
+
+  const response = await service.chat(testUser, {
+    message:
+      "Adım Ayşe Yılmaz. İstanbul'dayım. React ve TypeScript biliyorum. Boğaziçi Üniversitesi Bilgisayar Mühendisliği mezunuyum.",
+    session_id: "first-login-profile",
+  })
+
+  expect(response.is_profile_ready).toBe(true)
+  expect(response.missing_required_fields).toEqual([])
+  expect(response.redirect_to).toBe("/profile")
+  expect(savedProfiles).toEqual([
+    {
+      userId: testUser.id,
+      profileData: response.profile,
+    },
+  ])
 })

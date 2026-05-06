@@ -1,10 +1,11 @@
 // Module: Coordinates authentication state and renders the web application shell.
 import { useEffect, useState, type JSX } from "react"
-import { Navigate, Route, Routes } from "react-router"
+import { Navigate, Route, Routes, useNavigate } from "react-router"
 
 import { AuthPage } from "@/components/auth/auth-page"
 import { ProfileDashboardPage } from "@/components/profile-dashboard/profile-dashboard-page"
 import { ExtensionInstallPrompt } from "@/components/extension-install/extension-install-prompt"
+import { ProfilePage } from "@/components/profile/profile-page"
 import { ProfileChatPage } from "@/components/profile-chat/profile-chat-page"
 import {
   getCurrentUser,
@@ -27,8 +28,12 @@ type AuthState =
 type ExtensionStatus = "checking" | "installed" | "missing"
 
 const CHROME_EXTENSION_STORE_URL = "https://chromewebstore.google.com/"
+const AUTH_ROUTE = "/auth"
+const PROFILE_CHAT_ROUTE = "/profile-chat"
+const PROFILE_ROUTE = "/profile"
 
 export function App(): JSX.Element {
+  const navigate = useNavigate()
   const [initialToken] = useState<string | null>(() => getStoredAccessToken())
   const [authState, setAuthState] = useState<AuthState>(() =>
     initialToken === null ? { status: "guest" } : { status: "checking" }
@@ -107,6 +112,14 @@ export function App(): JSX.Element {
     window.open(CHROME_EXTENSION_STORE_URL, "_blank", "noopener,noreferrer")
   }
 
+  const handleProfileCompleted = (redirectTo: string): void => {
+    navigate(redirectTo, { replace: true })
+  }
+
+  const handleProfileChatRequested = (): void => {
+    navigate(PROFILE_CHAT_ROUTE)
+  }
+
   if (authState.status === "checking") {
     return (
       <main className="flex min-h-svh items-center justify-center bg-muted/30 p-6">
@@ -118,32 +131,55 @@ export function App(): JSX.Element {
   }
 
   if (authState.status === "guest") {
-    return <AuthPage onAuthenticated={handleAuthenticated} />
+    return (
+      <Routes>
+        <Route
+          path={AUTH_ROUTE}
+          element={<AuthPage onAuthenticated={handleAuthenticated} />}
+        />
+        <Route path="/" element={<Navigate to={AUTH_ROUTE} replace />} />
+        <Route path="*" element={<Navigate to={AUTH_ROUTE} replace />} />
+      </Routes>
+    )
   }
 
-    return (
+  const profileChatPage = (
+    <>
+      <ProfileChatPage
+        token={accessToken ?? ""}
+        user={authState.user}
+        onLogout={handleLogout}
+        onProfileCompleted={handleProfileCompleted}
+      />
+      {extensionStatus === "missing" && !isExtensionPromptDismissed ? (
+        <ExtensionInstallPrompt
+          onInstallClick={handleInstallExtension}
+          onRemindLater={() => setIsExtensionPromptDismissed(true)}
+        />
+      ) : null}
+    </>
+  )
+
+  return (
     <Routes>
+      <Route path="/" element={<Navigate to={PROFILE_CHAT_ROUTE} replace />} />
       <Route
-        path="/"
+        path={AUTH_ROUTE}
+        element={<Navigate to={PROFILE_CHAT_ROUTE} replace />}
+      />
+      <Route path={PROFILE_CHAT_ROUTE} element={profileChatPage} />
+      <Route
+        path={PROFILE_ROUTE}
         element={
-          <>
-            <ProfileChatPage
-              token={accessToken ?? ""}
-              user={authState.user}
-              onLogout={handleLogout}
-            />
-            {extensionStatus === "missing" && !isExtensionPromptDismissed ? (
-              <ExtensionInstallPrompt
-                onInstallClick={handleInstallExtension}
-                onRemindLater={() => setIsExtensionPromptDismissed(true)}
-              />
-            ) : null}
-          </>
+          <ProfilePage
+            token={accessToken ?? ""}
+            user={authState.user}
+            onLogout={handleLogout}
+            onProfileChatRequested={handleProfileChatRequested}
+          />
         }
       />
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to={PROFILE_CHAT_ROUTE} replace />} />
     </Routes>
   )
-}
-
 }
