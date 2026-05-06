@@ -26,8 +26,8 @@ test("default profile agent request settings avoid long pending responses", () =
 
   const settings = getSettings()
 
-  expect(settings.profileAgentRequestTimeoutSeconds).toBe(12)
-  expect(settings.profileAgentMaxRetries).toBe(0)
+  expect(settings.profileAgentRequestTimeoutSeconds).toBe(30)
+  expect(settings.profileAgentMaxRetries).toBe(1)
 })
 
 test("profile agent model can be overridden", () => {
