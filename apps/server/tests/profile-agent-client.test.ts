@@ -1,4 +1,4 @@
-// Module: Verifies Gemini profile agent response parsing edge cases.
+// Module: Verifies Groq profile agent response parsing edge cases.
 import { expect, test } from "bun:test"
 
 import {
@@ -20,10 +20,10 @@ const testSettings: Settings = {
   accessTokenExpireMinutes: 60,
   corsAllowedOrigins: ["http://localhost:5173"],
   corsAllowedOriginRegex: null,
-  googleApiKey: "test-google-api-key",
-  profileAgentModel: "gemini-3-flash-preview",
-  profileAgentRequestTimeoutSeconds: 20,
-  profileAgentMaxRetries: 0,
+  groqApiKey: "test-groq-api-key",
+  agentModel: "openai/gpt-oss-120b",
+  agentRequestTimeoutSeconds: 20,
+  agentMaxRetries: 0,
 }
 
 const testRequest: ProfileAgentRequest = {
@@ -84,10 +84,10 @@ test("profile agent client classifies malformed LLM JSON as request error", asyn
   const mockFetch = async () =>
     new Response(
       JSON.stringify({
-        candidates: [
+        choices: [
           {
-            content: {
-              parts: [{ text: "{\"reply\": 42, \"profile_patch\": {}}" }],
+            message: {
+              content: '{"reply": 42, "profile_patch": {}}',
             },
           },
         ],

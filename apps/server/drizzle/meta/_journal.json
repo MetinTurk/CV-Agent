@@ -15,6 +15,20 @@
       "when": 1778065827755,
       "tag": "0001_dizzy_bloodaxe",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778068808838,
+      "tag": "0002_loud_stature",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1778160000000,
+      "tag": "0003_match_analysis",
+      "breakpoints": true
     }
   ]
 }

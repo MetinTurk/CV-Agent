@@ -1,6 +1,10 @@
 // Module: Defines the PostgreSQL tables used by the CV Agent server.
 import { jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core"
 
+import type {
+  JobDescription,
+  MatchAnalysis,
+} from "../schemas/job-analysis"
 import type { ProfileData } from "../schemas/profile-chat"
 
 export const users = pgTable("users", {
@@ -27,7 +31,23 @@ export const profiles = pgTable("profiles", {
     .defaultNow(),
 })
 
+export const jobAnalyses = pgTable("job_analyses", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  url: text("url").notNull(),
+  rawContent: text("raw_content").notNull(),
+  jobDescription: jsonb("job_description").$type<JobDescription>().notNull(),
+  matchAnalysis: jsonb("match_analysis").$type<MatchAnalysis>(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+})
+
 export type UserRecord = typeof users.$inferSelect
 export type NewUserRecord = typeof users.$inferInsert
 export type ProfileRecord = typeof profiles.$inferSelect
 export type NewProfileRecord = typeof profiles.$inferInsert
+export type JobAnalysisRecord = typeof jobAnalyses.$inferSelect
+export type NewJobAnalysisRecord = typeof jobAnalyses.$inferInsert

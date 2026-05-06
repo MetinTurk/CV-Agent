@@ -47,7 +47,6 @@ export function ProfilePage({
   onLogout,
   onProfileChatRequested,
 }: ProfilePageProps): JSX.Element {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const [profileState, setProfileState] = useState<ProfileLoadState>({
     status: "loading",
   })
@@ -84,10 +83,7 @@ export function ProfilePage({
 
   return (
     <main className="flex min-h-svh bg-background">
-      <AppSidebar
-        isOpen={isSidebarOpen}
-        onToggle={() => setIsSidebarOpen((currentValue) => !currentValue)}
-      />
+      <AppSidebar token={token} />
 
       <section className="min-w-0 flex-1 bg-muted/30">
         <header className="flex min-h-16 items-center justify-between gap-3 border-b border-border bg-background px-4 py-3 md:px-6">
