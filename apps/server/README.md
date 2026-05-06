@@ -1,47 +1,41 @@
 # CV Agent Server
 
-FastAPI backend for the CV Agent project.
+ElysiaJS backend for the CV Agent project.
 
 ## Requirements
 
-- Python 3.11+
+- Bun 1.3+
+- PostgreSQL
+- pnpm workspace dependencies
 
-## Setup
+## Environment
 
 ```bash
-cd apps/server
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -e ".[dev]"
+DATABASE_URL="postgres://postgres:postgres@localhost:5432/cv_agent"
+ACCESS_TOKEN_SECRET="development-only-change-me"
 ```
 
-## Gemini API
-
-Profil toplama sohbeti gerçek Deep Agents + Gemini çağrısı yapar. Anahtarı server
-process'ini başlatmadan önce burada tanımlayın:
+Optional settings:
 
 ```bash
-export GOOGLE_API_KEY="gemini-api-anahtariniz"
+HOST="0.0.0.0"
+PORT="3000"
+CORS_ALLOWED_ORIGINS="http://localhost:5173"
+CORS_ALLOWED_ORIGIN_REGEX="^http://(localhost|127\\.0\\.0\\.1):[0-9]+$"
+PROFILE_AGENT_MODEL="google_genai:gemini-3-pro-preview"
 ```
 
-Varsayılan model `google_genai:gemini-3-pro-preview`. Gerekirse şununla
-değiştirilebilir:
+## Database
 
 ```bash
-export PROFILE_AGENT_MODEL="google_genai:gemini-3-flash-preview"
+pnpm --filter server db:generate
+pnpm --filter server db:push
 ```
 
 ## Development
 
 ```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 3000
-```
-
-Open the API docs at:
-
-```text
-http://localhost:3000/docs
+pnpm --filter server dev
 ```
 
 Health check:
