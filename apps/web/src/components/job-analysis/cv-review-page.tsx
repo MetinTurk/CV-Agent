@@ -1,5 +1,5 @@
 // Module: Renders the tailored CV produced by the LLM (passed via router state).
-import type { JSX } from "react"
+import { useState, type JSX } from "react"
 import { useLocation, useNavigate } from "react-router"
 import {
   ArrowLeft,
@@ -10,6 +10,7 @@ import {
   Eye,
   FileText,
   ListChecks,
+  Loader2,
   PencilLine,
   PlusCircle,
   TrendingUp,
@@ -28,6 +29,7 @@ import {
 import { Separator } from "@workspace/ui/components/separator"
 import { cn } from "@workspace/ui/lib/utils"
 
+import { downloadCvAsDocx } from "@/lib/cv-docx"
 import type { TailoredCv } from "@/lib/cv-generation-api"
 import type { JobAnalysisResponse } from "@/lib/job-analysis-api"
 
@@ -191,7 +193,17 @@ function ReviewStepper(): JSX.Element {
   )
 }
 
-function ReviewToolbar(): JSX.Element {
+type ReviewToolbarProps = {
+  onDownload: () => void
+  isDownloading: boolean
+  isDownloadDisabled: boolean
+}
+
+function ReviewToolbar({
+  onDownload,
+  isDownloading,
+  isDownloadDisabled,
+}: ReviewToolbarProps): JSX.Element {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
       <div className="flex items-center gap-2">
@@ -212,15 +224,27 @@ function ReviewToolbar(): JSX.Element {
           className="inline-flex items-stretch overflow-hidden rounded-lg"
           data-slot="button-group"
         >
-          <Button type="button" size="sm" className="rounded-r-none">
-            <Download data-icon="inline-start" />
-            İndir
+          <Button
+            type="button"
+            size="sm"
+            className="rounded-r-none"
+            onClick={onDownload}
+            disabled={isDownloadDisabled || isDownloading}
+            aria-label="CV'yi DOCX olarak indir"
+          >
+            {isDownloading ? (
+              <Loader2 data-icon="inline-start" className="animate-spin" />
+            ) : (
+              <Download data-icon="inline-start" />
+            )}
+            {isDownloading ? "Hazırlanıyor..." : "DOCX İndir"}
           </Button>
           <Button
             type="button"
             size="sm"
             className="rounded-l-none border-l border-primary-foreground/20 px-2"
             aria-label="Daha fazla indirme seçeneği"
+            disabled={isDownloadDisabled || isDownloading}
           >
             <ChevronDown />
           </Button>
@@ -463,6 +487,9 @@ export function CvReviewPage(): JSX.Element {
   const state = (location.state ?? null) as CvReviewLocationState | null
   const tailoredCv = state?.tailoredCv ?? null
 
+  const [isDownloading, setIsDownloading] = useState(false)
+  const [downloadError, setDownloadError] = useState<string | null>(null)
+
   const handleBack = (): void => {
     if (state?.analysis !== undefined) {
       navigate("/job-analysis", {
@@ -471,6 +498,23 @@ export function CvReviewPage(): JSX.Element {
       return
     }
     navigate(-1)
+  }
+
+  const handleDownload = async (): Promise<void> => {
+    if (tailoredCv === null || isDownloading) {
+      return
+    }
+    setIsDownloading(true)
+    setDownloadError(null)
+    try {
+      await downloadCvAsDocx(tailoredCv)
+    } catch {
+      setDownloadError(
+        "CV indirilemedi. Lütfen tekrar deneyin veya tarayıcınızı kontrol edin."
+      )
+    } finally {
+      setIsDownloading(false)
+    }
   }
 
   return (
@@ -501,10 +545,24 @@ export function CvReviewPage(): JSX.Element {
 
         <Card className="gap-4">
           <CardHeader className="pb-0">
-            <ReviewToolbar />
+            <ReviewToolbar
+              onDownload={() => {
+                void handleDownload()
+              }}
+              isDownloading={isDownloading}
+              isDownloadDisabled={tailoredCv === null}
+            />
           </CardHeader>
 
           <CardContent className="bg-muted/30 py-8">
+            {downloadError !== null ? (
+              <p
+                role="alert"
+                className="mx-auto mb-4 w-full max-w-3xl rounded-md border border-destructive/40 bg-destructive/10 px-4 py-2 text-sm text-destructive"
+              >
+                {downloadError}
+              </p>
+            ) : null}
             {tailoredCv !== null ? (
               <ReviewCvDocument cv={tailoredCv} />
             ) : (

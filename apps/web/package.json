@@ -13,6 +13,8 @@
   },
   "dependencies": {
     "@workspace/ui": "workspace:*",
+    "docx": "^9.6.1",
+    "file-saver": "^2.0.5",
     "lucide-react": "^1.14.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
@@ -21,6 +23,7 @@
   "devDependencies": {
     "@eslint/js": "^9.39.2",
     "@tailwindcss/vite": "^4.1.18",
+    "@types/file-saver": "^2.0.7",
     "@types/node": "^25.1.0",
     "@types/react": "^19.2.10",
     "@types/react-dom": "^19.2.3",
