@@ -3,7 +3,11 @@ from fastapi import APIRouter, HTTPException, status
 
 from app.api.deps import CurrentUserDep, ProfileChatServiceDep
 from app.schemas.profile_chat import ProfileChatRequest, ProfileChatResponse
-from app.services.profile_agent import MissingLLMConfigurationError, ProfileAgentError
+from app.services.profile_agent import (
+    MissingLLMConfigurationError,
+    ProfileAgentError,
+    ProfileAgentTimeoutError,
+)
 
 router = APIRouter(prefix="/profile-chat")
 
@@ -21,6 +25,14 @@ def send_profile_chat_message(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=str(error),
         ) from error
+    except ProfileAgentTimeoutError:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=(
+                "Profil asistanı zamanında yanıt veremedi. "
+                "Lütfen kısa bir süre sonra tekrar deneyin."
+            ),
+        ) from None
     except ProfileAgentError:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
