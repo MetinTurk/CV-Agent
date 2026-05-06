@@ -35,6 +35,7 @@ const PROFILE_ROUTE = "/profile"
 export function App(): JSX.Element {
   const navigate = useNavigate()
   const [initialToken] = useState<string | null>(() => getStoredAccessToken())
+  const [accessToken, setAccessToken] = useState<string | null>(initialToken)
   const [authState, setAuthState] = useState<AuthState>(() =>
     initialToken === null ? { status: "guest" } : { status: "checking" }
   )
