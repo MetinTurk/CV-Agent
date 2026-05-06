@@ -1,5 +1,6 @@
 // Module: Coordinates authentication state and renders the web application shell.
 import { useEffect, useState, type JSX } from "react"
+import { Navigate, Route, Routes } from "react-router"
 
 import { AuthPage } from "@/components/auth/auth-page"
 import { ExtensionInstallPrompt } from "@/components/extension-install/extension-install-prompt"
@@ -121,19 +122,29 @@ export function App(): JSX.Element {
     return <AuthPage onAuthenticated={handleAuthenticated} />
   }
 
-  return (
-    <>
-      <ProfileChatPage
-        token={accessToken ?? ""}
-        user={authState.user}
-        onLogout={handleLogout}
+    return (
+    <Routes>
+      <Route
+        path="/"
+        element={
+          <>
+            <ProfileChatPage
+              token={accessToken ?? ""}
+              user={authState.user}
+              onLogout={handleLogout}
+            />
+            {extensionStatus === "missing" && !isExtensionPromptDismissed ? (
+              <ExtensionInstallPrompt
+                onInstallClick={handleInstallExtension}
+                onRemindLater={() => setIsExtensionPromptDismissed(true)}
+              />
+            ) : null}
+          </>
+        }
       />
-      {extensionStatus === "missing" && !isExtensionPromptDismissed ? (
-        <ExtensionInstallPrompt
-          onInstallClick={handleInstallExtension}
-          onRemindLater={() => setIsExtensionPromptDismissed(true)}
-        />
-      ) : null}
-    </>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   )
+}
+
 }

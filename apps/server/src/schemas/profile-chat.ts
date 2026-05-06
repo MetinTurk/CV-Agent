@@ -24,6 +24,20 @@ export const ProfileDataSchema = t.Object({
 export const ProfileChatRequestSchema = t.Object({
   message: t.String({ minLength: 1, maxLength: 4000 }),
   session_id: t.String({ minLength: 1, maxLength: 80, default: "default" }),
+  source: t.Optional(
+    t.Object({
+      type: t.Literal("url"),
+      value: t.String({ minLength: 1, maxLength: 2048 }),
+    })
+  ),
+})
+
+export const ProfileChatDocumentRequestSchema = t.Object({
+  message: t.Optional(t.String({ maxLength: 4000 })),
+  session_id: t.String({ minLength: 1, maxLength: 80, default: "default" }),
+  document: t.File({
+    maxSize: "5m",
+  }),
 })
 
 export const ProfileChatResponseSchema = t.Object({
@@ -37,7 +51,16 @@ export const ProfileChatResponseSchema = t.Object({
 export type RequiredProfileField = (typeof REQUIRED_PROFILE_FIELDS)[number]
 export type ProfileData = Static<typeof ProfileDataSchema>
 export type ProfileChatRequest = Static<typeof ProfileChatRequestSchema>
+export type ProfileChatDocumentRequest = Static<
+  typeof ProfileChatDocumentRequestSchema
+>
 export type ProfileChatResponse = Static<typeof ProfileChatResponseSchema>
+export type ProfileSourceType = "text" | "docx" | "url"
+export type ProfileSourceContext = {
+  type: ProfileSourceType
+  label: string
+  content: string
+}
 export type ProfilePatch = Partial<{
   full_name: string
   location: string
