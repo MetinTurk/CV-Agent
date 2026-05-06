@@ -4,6 +4,7 @@ import { Elysia } from "elysia"
 
 import { createAuthRoutes } from "./api/auth"
 import { createHealthRoutes } from "./api/health"
+import { createJobAnalysisRoutes } from "./api/job-analyses"
 import { createProfileRoutes } from "./api/profile"
 import { createProfileChatRoutes } from "./api/profile-chat"
 import { getCorsOrigins, type Settings } from "./core/config"
@@ -62,6 +63,7 @@ export function createApp(settings: Settings) {
       api
         .use(createAuthRoutes(authService))
         .use(createHealthRoutes(settings))
+        .use(createJobAnalysisRoutes())
         .use(createProfileRoutes(authService, profileRepository))
         .use(createProfileChatRoutes(authService, profileChatService))
     )
