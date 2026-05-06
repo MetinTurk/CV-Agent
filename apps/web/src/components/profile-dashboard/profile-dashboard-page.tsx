@@ -1,8 +1,10 @@
 // Module: Renders the static profile dashboard for authenticated CV Agent users.
 import { useState, type JSX } from "react"
 import {
+  ArrowLeft,
   ArrowUpRight,
   Bell,
+  ChevronDown,
   Download,
   Eye,
   Info,
@@ -11,6 +13,7 @@ import {
   LogOut,
   Pencil,
   Plus,
+  RefreshCcw,
   Sparkles,
   Search,
   Settings,
@@ -42,6 +45,7 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import type { AuthUser } from "@/lib/auth-api"
 import {
   profileDashboardMock,
+  type AllProjectItem,
   type CertificateItem,
   type ContactItem,
   type ProjectItem,
@@ -52,6 +56,8 @@ type ProfileDashboardPageProps = {
   user: AuthUser
   onLogout: () => void
 }
+
+type DashboardView = "profile" | "projects"
 
 function DashboardHeader({
   accountName,
@@ -265,11 +271,13 @@ function SectionHeader({
   description,
   actionLabel = "Ekle",
   onAddClick,
+  onViewAllClick,
 }: {
   title: string
   description: string
   actionLabel?: string
   onAddClick?: () => void
+  onViewAllClick?: () => void
 }): JSX.Element {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -280,7 +288,12 @@ function SectionHeader({
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        <Button type="button" variant="outline" size="sm">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={onViewAllClick}
+        >
           Tümünü Gör
         </Button>
         <Button type="button" size="sm" onClick={onAddClick}>
@@ -407,7 +420,11 @@ function AddProjectModal({ onClose }: { onClose: () => void }): JSX.Element {
   )
 }
 
-function ProjectsSection(): JSX.Element {
+function ProjectsSection({
+  onViewAllProjects,
+}: {
+  onViewAllProjects: () => void
+}): JSX.Element {
   const [isAddProjectOpen, setIsAddProjectOpen] = useState(false)
 
   return (
@@ -418,6 +435,7 @@ function ProjectsSection(): JSX.Element {
           description="Başvuru hikayesini güçlendiren seçili çalışma örnekleri."
           actionLabel="Proje Ekle"
           onAddClick={() => setIsAddProjectOpen(true)}
+          onViewAllClick={onViewAllProjects}
         />
         <div className="grid gap-4 lg:grid-cols-2">
           {profileDashboardMock.projects.map((project) => (
@@ -430,6 +448,104 @@ function ProjectsSection(): JSX.Element {
         <AddProjectModal onClose={() => setIsAddProjectOpen(false)} />
       ) : null}
     </>
+  )
+}
+
+function getProjectToneClass(tone: AllProjectItem["tone"]): string {
+  if (tone === "primary") {
+    return "bg-primary/10 text-primary"
+  }
+
+  if (tone === "secondary") {
+    return "bg-secondary text-secondary-foreground"
+  }
+
+  return "bg-muted text-muted-foreground"
+}
+
+function AllProjectCard({ project }: { project: AllProjectItem }): JSX.Element {
+  return (
+    <Card className="gap-4 bg-background p-5 transition-shadow hover:shadow-md">
+      <CardHeader>
+        <Badge
+          variant="secondary"
+          className={cn("gap-1", getProjectToneClass(project.tone))}
+        >
+          <span className="size-1.5 rounded-full bg-current" />
+          {project.language}
+        </Badge>
+        <CardTitle className="text-lg">{project.title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm leading-6 text-muted-foreground">
+          {project.description}
+        </p>
+      </CardContent>
+    </Card>
+  )
+}
+
+function ProjectsOverviewPage({ onBack }: { onBack: () => void }): JSX.Element {
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-3">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={onBack}
+          className="w-fit"
+        >
+          <ArrowLeft data-icon="inline-start" />
+          Ana Sayfaya Dön
+        </Button>
+        <div className="min-w-0">
+          <h1 className="text-3xl font-semibold tracking-normal">Projelerim</h1>
+          <p className="mt-1 text-sm leading-5 text-muted-foreground">
+            GitHub üzerinden senkronize edilen projeleriniz ve AI tarafından
+            oluşturulan analizleri.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-[minmax(260px,1fr)_auto_auto_auto]">
+        <div className="relative min-w-0">
+          <Search className="pointer-events-none absolute top-1/2 left-3 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Proje ara..."
+            aria-label="Proje ara"
+            className="h-10 bg-background pl-9"
+          />
+        </div>
+        <Button type="button" variant="outline" className="justify-between">
+          Tür
+          <ChevronDown data-icon="inline-end" />
+        </Button>
+        <Button type="button" variant="outline" className="justify-between">
+          Sırala
+          <ChevronDown data-icon="inline-end" />
+        </Button>
+        <Button type="button">
+          <RefreshCcw data-icon="inline-start" />
+          Senkronize Et
+        </Button>
+      </div>
+
+      <section className="flex flex-col gap-4" aria-label="Tüm projeler">
+        {profileDashboardMock.allProjects.map((project) => (
+          <AllProjectCard key={project.title} project={project} />
+        ))}
+      </section>
+
+      <Card className="ml-auto max-w-sm gap-2 bg-background">
+        <CardTitle className="text-sm">Kod Kalitesi Analizi</CardTitle>
+        <CardDescription>
+          Projelerinizdeki kod kalitesi analizini görmek için senkronizasyon
+          tamamlandığında bu alanda statik özet gösterilecektir.
+        </CardDescription>
+      </Card>
+    </div>
   )
 }
 
@@ -535,6 +651,7 @@ export function ProfileDashboardPage({
   onLogout,
 }: ProfileDashboardPageProps): JSX.Element {
   const accountName = `${user.first_name} ${user.last_name}`
+  const [dashboardView, setDashboardView] = useState<DashboardView>("profile")
 
   return (
     <div className="flex min-h-svh bg-muted/30">
@@ -544,19 +661,27 @@ export function ProfileDashboardPage({
         <DashboardHeader accountName={accountName} onLogout={onLogout} />
 
         <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-5 px-4 py-5 md:px-6 lg:py-6">
-          <section
-            id="profilim"
-            className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(340px,0.65fr)]"
-          >
-            <ProfileSummaryCard />
-            <ProfileContactCard />
-          </section>
+          {dashboardView === "projects" ? (
+            <ProjectsOverviewPage onBack={() => setDashboardView("profile")} />
+          ) : (
+            <>
+              <section
+                id="profilim"
+                className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(340px,0.65fr)]"
+              >
+                <ProfileSummaryCard />
+                <ProfileContactCard />
+              </section>
 
-          <ProjectsSection />
+              <ProjectsSection
+                onViewAllProjects={() => setDashboardView("projects")}
+              />
 
-          <CertificatesSection />
+              <CertificatesSection />
 
-          <CareerAssistantSection />
+              <CareerAssistantSection />
+            </>
+          )}
         </div>
       </main>
     </div>

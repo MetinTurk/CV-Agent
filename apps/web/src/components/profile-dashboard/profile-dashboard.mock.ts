@@ -36,6 +36,13 @@ export type ProjectItem = {
   tags: string[]
 }
 
+export type AllProjectItem = {
+  title: string
+  description: string
+  language: string
+  tone: "primary" | "secondary" | "accent"
+}
+
 export type CertificateItem = {
   title: string
   meta: string
@@ -115,6 +122,29 @@ export const profileDashboardMock = {
       tags: ["UX Research", "iOS/Android", "Prototyping"],
     },
   ] satisfies ProjectItem[],
+  allProjects: [
+    {
+      title: "Aether Design System",
+      description:
+        "React tabanlı, erişilebilir ve ölçeklenebilir bir UI bileşen kütüphanesi. Kurumsal kimlik standartlarına uygun modern web uygulamaları geliştirmek için optimize edilmiştir.",
+      language: "TypeScript",
+      tone: "primary",
+    },
+    {
+      title: "Nexus AI Core",
+      description:
+        "Doğal dil işleme algoritmaları kullanarak kariyer analizleri üreten mikroservis mimarisi. Python ve FastAPI ile geliştirilmiş, yüksek performanslı veri işleme motoru.",
+      language: "Python",
+      tone: "secondary",
+    },
+    {
+      title: "Quantum Analytics Dashboard",
+      description:
+        "Büyük veri setlerini görselleştiren interaktif finansal analiz paneli. Vue.js ve D3.js kullanılarak gerçek zamanlı veri akışlarını işleyecek şekilde tasarlanmıştır.",
+      language: "Vue",
+      tone: "accent",
+    },
+  ] satisfies AllProjectItem[],
   certificates: [
     {
       title: "Alex_Thompson_CV_2...",
