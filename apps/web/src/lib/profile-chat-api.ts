@@ -29,7 +29,7 @@ type ApiErrorPayload = {
 }
 
 const API_BASE_URL = (
-  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000/api"
+  import.meta.env.VITE_API_BASE_URL ?? "/api"
 ).replace(/\/$/, "")
 
 function isApiErrorPayload(value: unknown): value is ApiErrorPayload {
@@ -52,14 +52,22 @@ export async function sendProfileChatMessage(
   token: string,
   payload: ProfileChatPayload
 ): Promise<ProfileChatResponse> {
-  const response = await fetch(`${API_BASE_URL}/profile-chat/message`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  })
+  let response: Response
+
+  try {
+    response = await fetch(`${API_BASE_URL}/profile-chat/message`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    })
+  } catch {
+    throw new Error(
+      "API sunucusuna ulaşılamadı. Lütfen server'ın çalıştığını ve API adresinin doğru olduğunu kontrol edin."
+    )
+  }
 
   if (!response.ok) {
     let errorPayload: unknown = null
