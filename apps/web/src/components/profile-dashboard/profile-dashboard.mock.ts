@@ -53,6 +53,13 @@ export type AnalysisRecommendationItem = {
   description: string
 }
 
+export type AtsCheckResult = {
+  score: number
+  verdict: string
+  strengths: string[]
+  warnings: string[]
+}
+
 export type CertificateItem = {
   title: string
   meta: string
@@ -215,6 +222,38 @@ export const profileDashboardMock = {
       },
     ] satisfies AnalysisRecommendationItem[],
   },
+  cvReview: {
+    name: "Alex Rivera",
+    title: "Principal Solutions Architect",
+    summary:
+      "High-impact Solutions Architect with 12+ years of experience specializing in distributed systems and cloud-native architectures. Proven track record of leading large-scale digital transformations and optimizing enterprise-grade cloud infrastructures.",
+    skills: [
+      "AWS (Multi-region)",
+      "Kubernetes / Docker",
+      "Terraform / IaC",
+      "Java / Spring Boot",
+      "Microservices Design",
+      "Event-Driven Architecture",
+    ],
+    experience: {
+      role: "Lead Cloud Architect",
+      company: "TechFlow Corp",
+      period: "2019 - Present",
+      bullets: [
+        "Architected a global multi-cloud delivery platform reducing latency by 40% for 5M+ users.",
+        "Led the migration of 200+ legacy services to a containerized Kubernetes environment.",
+        "Implemented automated CI/CD pipelines reducing deployment time from days to minutes.",
+      ],
+    },
+    contact:
+      "alex.rivera@techflow.corp | +1 (555) 0123-4567 | linkedin.com/in/arivera-architect",
+  },
+  atsCheck: {
+    score: 78,
+    verdict: "Orta-Güçlü Eşleşme",
+    strengths: ["Node.js", "Express.js", "PostgreSQL", "REST API"],
+    warnings: ["Docker CV'de görünmüyor.", "Unit Test deneyimi kanıtlanmamış."],
+  } satisfies AtsCheckResult,
   certificates: [
     {
       title: "Alex_Thompson_CV_2...",

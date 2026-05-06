@@ -3,8 +3,10 @@ import { useState, type JSX } from "react"
 import {
   ArrowLeft,
   ArrowUpRight,
+  BarChart3,
   Bell,
   ChevronDown,
+  Check,
   CheckCircle2,
   CircleX,
   Download,
@@ -22,6 +24,8 @@ import {
   Search,
   Settings,
   TrendingUp,
+  ZoomIn,
+  ZoomOut,
   X,
 } from "lucide-react"
 
@@ -63,7 +67,13 @@ type ProfileDashboardPageProps = {
   onLogout: () => void
 }
 
-type DashboardView = "profile" | "projects" | "analysis"
+type DashboardView = "profile" | "projects" | "analysis" | "review"
+
+function getInitialDashboardView(): DashboardView {
+  return window.location.pathname === "/job-analysis/review"
+    ? "review"
+    : "profile"
+}
 
 function DashboardHeader({
   accountName,
@@ -620,7 +630,11 @@ function AnalysisColumn({
   )
 }
 
-function JobAnalysisPage(): JSX.Element {
+function JobAnalysisPage({
+  onCreateCustomCv,
+}: {
+  onCreateCustomCv: () => void
+}): JSX.Element {
   const analysis = profileDashboardMock.jobAnalysis
 
   return (
@@ -653,6 +667,7 @@ function JobAnalysisPage(): JSX.Element {
           type="button"
           size="lg"
           className="h-14 px-7 text-base shadow-md"
+          onClick={onCreateCustomCv}
         >
           <ListChecks data-icon="inline-start" />
           Özel CV Oluştur
@@ -728,6 +743,314 @@ function JobAnalysisPage(): JSX.Element {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+function WizardStep({
+  label,
+  status,
+}: {
+  label: string
+  status: "done" | "current"
+}): JSX.Element {
+  const isCurrent = status === "current"
+
+  return (
+    <div className="flex flex-col items-center gap-2 text-sm">
+      <div
+        className={cn(
+          "flex size-10 items-center justify-center rounded-full font-semibold",
+          isCurrent
+            ? "bg-primary text-primary-foreground"
+            : "bg-muted text-muted-foreground"
+        )}
+      >
+        {isCurrent ? "3" : <Check />}
+      </div>
+      <span className={cn(isCurrent && "font-medium text-primary")}>
+        {label}
+      </span>
+    </div>
+  )
+}
+
+function AtsScoreRing({ score }: { score: number }): JSX.Element {
+  return (
+    <div
+      className="flex size-40 items-center justify-center rounded-full"
+      style={{
+        background: `conic-gradient(var(--primary) ${score * 3.6}deg, var(--muted) 0deg)`,
+      }}
+      aria-label={`ATS benzerlik skoru yüzde ${score}`}
+    >
+      <div className="flex size-32 flex-col items-center justify-center rounded-full bg-card">
+        <span className="text-4xl font-semibold tracking-normal">{score}%</span>
+        <span className="mt-1 text-sm font-medium text-muted-foreground">
+          Benzerlik Skoru
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function AtsCheckModal({ onClose }: { onClose: () => void }): JSX.Element {
+  const ats = profileDashboardMock.atsCheck
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/35 p-4">
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="ats-check-title"
+        className="max-h-[calc(100svh-2rem)] w-full max-w-[840px] overflow-hidden rounded-lg border border-border bg-card text-card-foreground shadow-xl"
+      >
+        <header className="flex items-center justify-between border-b border-border px-6 py-5">
+          <div className="flex items-center gap-3">
+            <BarChart3 className="text-primary" />
+            <h2
+              id="ats-check-title"
+              className="text-2xl font-semibold tracking-normal"
+            >
+              ATS Kontrolü
+            </h2>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label="ATS kontrol penceresini kapat"
+            onClick={onClose}
+          >
+            <X />
+          </Button>
+        </header>
+
+        <div className="grid gap-8 px-6 py-9 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1fr)] md:items-center">
+          <div className="flex flex-col items-center gap-7 md:border-r md:border-border md:pr-8">
+            <AtsScoreRing score={ats.score} />
+            <Badge className="rounded-full bg-primary/10 px-5 py-2 text-sm font-semibold text-primary">
+              <CheckCircle2 data-icon="inline-start" />
+              {ats.verdict}
+            </Badge>
+          </div>
+
+          <div className="flex flex-col gap-8">
+            <section className="flex flex-col gap-4">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="text-primary" />
+                <h3 className="text-xl font-semibold tracking-normal">
+                  Güçlü Alanlar
+                </h3>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {ats.strengths.map((item) => (
+                  <Badge
+                    key={item}
+                    variant="outline"
+                    className="gap-2 rounded-full px-3 py-1 text-sm"
+                  >
+                    <Check className="text-primary" />
+                    {item}
+                  </Badge>
+                ))}
+              </div>
+            </section>
+
+            <section className="flex flex-col gap-4">
+              <div className="flex items-center gap-2">
+                <Info className="text-destructive" />
+                <h3 className="text-xl font-semibold tracking-normal">
+                  Uyarılar
+                </h3>
+              </div>
+              <div className="grid gap-3">
+                {ats.warnings.map((item) => (
+                  <div
+                    key={item}
+                    className="flex items-start gap-3 rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm"
+                  >
+                    <Info className="mt-0.5 shrink-0 text-destructive" />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <footer className="flex flex-col-reverse gap-3 border-t border-border bg-muted/30 px-6 py-5 sm:flex-row sm:justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            onClick={onClose}
+            className="h-11 px-6"
+          >
+            Kapat
+          </Button>
+          <Button
+            type="button"
+            size="lg"
+            onClick={onClose}
+            className="h-11 px-7"
+          >
+            Düzenlemeye Devam Et
+            <ArrowUpRight data-icon="inline-end" />
+          </Button>
+        </footer>
+      </section>
+    </div>
+  )
+}
+
+function CvReviewPage({
+  onBackToAnalysis,
+}: {
+  onBackToAnalysis: () => void
+}): JSX.Element {
+  const [isAtsOpen, setIsAtsOpen] = useState(false)
+  const cv = profileDashboardMock.cvReview
+
+  return (
+    <>
+      <div className="flex flex-col gap-6">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={onBackToAnalysis}
+          className="w-fit"
+        >
+          <ArrowLeft data-icon="inline-start" />
+          Düzenlemeye Geri Dön
+        </Button>
+
+        <div className="flex flex-col gap-6">
+          <h1 className="text-4xl font-semibold tracking-normal">
+            CV Özelleştirme Sihirbazı
+          </h1>
+          <div className="grid items-center gap-4 md:grid-cols-[1fr_auto_1fr_auto_1fr]">
+            <WizardStep label="Analiz" status="done" />
+            <Separator className="hidden md:block" />
+            <WizardStep label="Düzenleme" status="done" />
+            <Separator className="hidden md:block" />
+            <WizardStep label="İnceleme" status="current" />
+          </div>
+        </div>
+
+        <Card className="overflow-hidden p-0">
+          <div className="flex flex-col gap-3 border-b border-border p-4 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex items-center gap-3">
+              <Eye className="text-muted-foreground" />
+              <h2 className="text-2xl font-semibold tracking-normal">
+                Sonuç Önizlemesi
+              </h2>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                onClick={() => setIsAtsOpen(true)}
+              >
+                <BarChart3 data-icon="inline-start" />
+                ATS Kontrolü Yap
+              </Button>
+              <Button type="button" variant="outline" size="lg">
+                Düzenlemeye Geri Dön
+              </Button>
+              <Button type="button" size="lg">
+                <Download data-icon="inline-start" />
+                İndir
+                <ChevronDown data-icon="inline-end" />
+              </Button>
+              <Separator
+                orientation="vertical"
+                className="hidden h-8 sm:block"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Yakınlaştır"
+              >
+                <ZoomIn />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Uzaklaştır"
+              >
+                <ZoomOut />
+              </Button>
+            </div>
+          </div>
+
+          <div className="bg-muted/40 p-5 md:p-8">
+            <article className="mx-auto flex min-h-[980px] w-full max-w-[920px] flex-col bg-background px-10 py-12 shadow-sm md:px-14">
+              <header className="border-b-2 border-foreground pb-5">
+                <h2 className="text-4xl font-semibold tracking-normal">
+                  {cv.name}
+                </h2>
+                <p className="mt-2 text-xl text-primary">{cv.title}</p>
+              </header>
+
+              <section className="mt-7">
+                <h3 className="text-sm font-semibold tracking-[0.12em] uppercase">
+                  Professional Summary
+                </h3>
+                <p className="mt-3 text-base leading-7">{cv.summary}</p>
+              </section>
+
+              <section className="mt-8">
+                <h3 className="text-sm font-semibold tracking-[0.12em] uppercase">
+                  Key Skills
+                </h3>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {cv.skills.map((skill) => (
+                    <Badge
+                      key={skill}
+                      variant="outline"
+                      className="rounded-md px-3 py-1.5 text-sm"
+                    >
+                      {skill}
+                    </Badge>
+                  ))}
+                </div>
+              </section>
+
+              <section className="mt-8">
+                <h3 className="text-sm font-semibold tracking-[0.12em] uppercase">
+                  Professional Experience
+                </h3>
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <p className="font-semibold">
+                    {cv.experience.role} | {cv.experience.company}
+                  </p>
+                  <p className="text-muted-foreground">
+                    {cv.experience.period}
+                  </p>
+                </div>
+                <ul className="mt-3 flex list-disc flex-col gap-2 pl-5">
+                  {cv.experience.bullets.map((item) => (
+                    <li key={item} className="leading-6">
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+
+              <footer className="mt-auto border-t border-border pt-8 text-center text-sm text-muted-foreground">
+                {cv.contact}
+              </footer>
+            </article>
+          </div>
+        </Card>
+      </div>
+
+      {isAtsOpen ? <AtsCheckModal onClose={() => setIsAtsOpen(false)} /> : null}
+    </>
   )
 }
 
@@ -833,16 +1156,39 @@ export function ProfileDashboardPage({
   onLogout,
 }: ProfileDashboardPageProps): JSX.Element {
   const accountName = `${user.first_name} ${user.last_name}`
-  const [dashboardView, setDashboardView] = useState<DashboardView>("profile")
+  const [dashboardView, setDashboardView] = useState<DashboardView>(() =>
+    getInitialDashboardView()
+  )
   const searchPlaceholder =
     dashboardView === "analysis" ? "Analizlerde ara..." : "Ara..."
+  const navigateToProfile = (): void => {
+    window.history.pushState(null, "", "/")
+    setDashboardView("profile")
+  }
+  const navigateToAnalysis = (): void => {
+    window.history.pushState(null, "", "/")
+    setDashboardView("analysis")
+  }
+  const navigateToReview = (): void => {
+    window.history.pushState(null, "", "/job-analysis/review")
+    setDashboardView("review")
+  }
 
   return (
     <div className="flex min-h-svh bg-muted/30">
       <AppSidebar
-        activeView={dashboardView === "analysis" ? "analysis" : "profile"}
+        activeView={
+          dashboardView === "analysis" || dashboardView === "review"
+            ? "analysis"
+            : "profile"
+        }
         onNavigate={(view) => {
-          setDashboardView(view === "analysis" ? "analysis" : "profile")
+          if (view === "analysis") {
+            navigateToAnalysis()
+            return
+          }
+
+          navigateToProfile()
         }}
       />
 
@@ -854,8 +1200,10 @@ export function ProfileDashboardPage({
         />
 
         <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-5 px-4 py-5 md:px-6 lg:py-6">
-          {dashboardView === "analysis" ? (
-            <JobAnalysisPage />
+          {dashboardView === "review" ? (
+            <CvReviewPage onBackToAnalysis={navigateToAnalysis} />
+          ) : dashboardView === "analysis" ? (
+            <JobAnalysisPage onCreateCustomCv={navigateToReview} />
           ) : dashboardView === "projects" ? (
             <ProjectsOverviewPage onBack={() => setDashboardView("profile")} />
           ) : (
