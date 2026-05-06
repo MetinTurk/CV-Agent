@@ -1,10 +1,10 @@
 // Module: Renders the authenticated application sidebar navigation.
 import type { JSX } from "react"
 import {
-  History,
+  BarChart3,
+  Bot,
+  GraduationCap,
   MessageCircle,
-  PanelLeftClose,
-  PanelLeftOpen,
   PlusCircle,
   UserRound,
   type LucideIcon,
@@ -18,11 +18,7 @@ type SidebarNavItem = {
   href: string
   label: string
   icon: LucideIcon
-}
-
-type AppSidebarProps = {
-  isOpen: boolean
-  onToggle: () => void
+  isActive?: boolean
 }
 
 const sidebarNavItems: SidebarNavItem[] = [
@@ -30,55 +26,46 @@ const sidebarNavItems: SidebarNavItem[] = [
     href: "#profilim",
     label: "Profilim",
     icon: UserRound,
+    isActive: true,
   },
   {
-    href: "#gecmis-analizler",
-    label: "Geçmiş Analizler",
-    icon: History,
+    href: "#is-analizi",
+    label: "İş Analizi",
+    icon: BarChart3,
   },
   {
-    href: "#chatbot",
-    label: "Chatbot",
+    href: "#gelisim-merkezi",
+    label: "Gelişim Merkezi",
+    icon: GraduationCap,
+  },
+  {
+    href: "#ai-kariyer-sohbeti",
+    label: "AI Kariyer Sohbeti",
     icon: MessageCircle,
   },
 ]
 
-export function AppSidebar({
-  isOpen,
-  onToggle,
-}: AppSidebarProps): JSX.Element {
-  const ToggleIcon = isOpen ? PanelLeftClose : PanelLeftOpen
-
+export function AppSidebar(): JSX.Element {
   return (
     <aside
-      className={cn(
-        "border-sidebar-border bg-sidebar text-sidebar-foreground flex min-h-svh shrink-0 flex-col border-r transition-[width] duration-300 ease-out",
-        isOpen ? "w-64" : "w-[4.5rem]"
-      )}
+      className="hidden min-h-svh w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground lg:flex"
       aria-label="Ana menü"
     >
-      <div className="flex h-16 items-center justify-between gap-2 px-4">
+      <div className="flex h-16 items-center gap-3 px-4">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+          <Bot />
+        </div>
         <a
           href="#profilim"
-          className={cn(
-            "min-w-0 text-lg font-semibold tracking-normal transition-opacity",
-            isOpen ? "opacity-100" : "sr-only opacity-0"
-          )}
+          className="min-w-0"
         >
-          CV Agent
+          <span className="block truncate text-base font-semibold tracking-normal">
+            Kariyer Asistanı
+          </span>
+          <span className="block truncate text-xs text-muted-foreground">
+            Yapay Zeka Destekli
+          </span>
         </a>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          aria-label={isOpen ? "Sidebar'ı kapat" : "Sidebar'ı aç"}
-          aria-expanded={isOpen}
-          title={isOpen ? "Sidebar'ı kapat" : "Sidebar'ı aç"}
-          onClick={onToggle}
-          className="shrink-0"
-        >
-          <ToggleIcon />
-        </Button>
       </div>
 
       <Separator />
@@ -92,17 +79,16 @@ export function AppSidebar({
               key={item.href}
               asChild
               variant="ghost"
-              size={isOpen ? "lg" : "icon-lg"}
+              size="lg"
               className={cn(
-                "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                isOpen ? "w-full justify-start" : "mx-auto"
+                "relative w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                item.isActive &&
+                  "bg-sidebar-accent text-sidebar-primary after:absolute after:right-1.5 after:top-1/2 after:h-5 after:w-1 after:-translate-y-1/2 after:rounded-full after:bg-sidebar-primary"
               )}
             >
               <a href={item.href} title={item.label}>
                 <Icon data-icon="inline-start" />
-                <span className={cn("truncate", !isOpen && "sr-only")}>
-                  {item.label}
-                </span>
+                <span className="truncate">{item.label}</span>
               </a>
             </Button>
           )
@@ -115,12 +101,10 @@ export function AppSidebar({
           size="lg"
           title="Yeni analiz başlat"
           aria-label="Yeni analiz başlat"
-          className={cn(isOpen ? "w-full justify-start" : "mx-auto")}
+          className="w-full justify-start"
         >
           <PlusCircle data-icon="inline-start" />
-          <span className={cn("truncate", !isOpen && "sr-only")}>
-            Yeni Analiz Başlat
-          </span>
+          <span className="truncate">Yeni Analiz Başlat</span>
         </Button>
       </div>
     </aside>

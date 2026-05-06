@@ -3,6 +3,7 @@ import { useEffect, useState, type JSX } from "react"
 import { Navigate, Route, Routes } from "react-router"
 
 import { AuthPage } from "@/components/auth/auth-page"
+import { ProfileDashboardPage } from "@/components/profile-dashboard/profile-dashboard-page"
 import { ExtensionInstallPrompt } from "@/components/extension-install/extension-install-prompt"
 import { ProfileChatPage } from "@/components/profile-chat/profile-chat-page"
 import {
@@ -29,7 +30,6 @@ const CHROME_EXTENSION_STORE_URL = "https://chromewebstore.google.com/"
 
 export function App(): JSX.Element {
   const [initialToken] = useState<string | null>(() => getStoredAccessToken())
-  const [accessToken, setAccessToken] = useState<string | null>(initialToken)
   const [authState, setAuthState] = useState<AuthState>(() =>
     initialToken === null ? { status: "guest" } : { status: "checking" }
   )
@@ -56,7 +56,6 @@ export function App(): JSX.Element {
       })
       .catch(() => {
         clearAccessToken()
-        setAccessToken(null)
         if (isActive) {
           setAuthState({ status: "guest" })
         }
