@@ -25,7 +25,7 @@ process'ini başlatmadan önce burada tanımlayın:
 export GOOGLE_API_KEY="gemini-api-anahtariniz"
 ```
 
-Varsayılan model `google_genai:gemini-3.1-pro-preview`. Gerekirse şununla
+Varsayılan model `google_genai:gemini-3-pro-preview`. Gerekirse şununla
 değiştirilebilir:
 
 ```bash
