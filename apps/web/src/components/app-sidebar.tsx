@@ -1,11 +1,13 @@
-// Module: Renders the authenticated application sidebar navigation.
+// Module: Renders the authenticated career dashboard sidebar navigation.
 import type { JSX } from "react"
 import {
+  Bot,
+  BriefcaseBusiness,
   History,
-  MessageCircle,
   PanelLeftClose,
   PanelLeftOpen,
   PlusCircle,
+  Search,
   UserRound,
   type LucideIcon,
 } from "lucide-react"
@@ -21,6 +23,7 @@ type SidebarNavItem = {
 }
 
 type AppSidebarProps = {
+  activeHref?: string
   isOpen: boolean
   onToggle: () => void
 }
@@ -32,18 +35,24 @@ const sidebarNavItems: SidebarNavItem[] = [
     icon: UserRound,
   },
   {
-    href: "#gecmis-analizler",
-    label: "Geçmiş Analizler",
+    href: "#gecmis-basvurular",
+    label: "Geçmiş Başvurular",
     icon: History,
   },
   {
-    href: "#chatbot",
-    label: "Chatbot",
-    icon: MessageCircle,
+    href: "#is-analizi",
+    label: "İş Analizi",
+    icon: Search,
+  },
+  {
+    href: "#ai-kariyer-sohbeti",
+    label: "AI Kariyer Sohbeti",
+    icon: Bot,
   },
 ]
 
 export function AppSidebar({
+  activeHref = "#gecmis-basvurular",
   isOpen,
   onToggle,
 }: AppSidebarProps): JSX.Element {
@@ -52,28 +61,38 @@ export function AppSidebar({
   return (
     <aside
       className={cn(
-        "border-sidebar-border bg-sidebar text-sidebar-foreground flex min-h-svh shrink-0 flex-col border-r transition-[width] duration-300 ease-out",
+        "hidden min-h-svh shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-300 ease-out md:flex",
         isOpen ? "w-64" : "w-[4.5rem]"
       )}
       aria-label="Ana menü"
     >
-      <div className="flex h-16 items-center justify-between gap-2 px-4">
+      <div className="flex h-[4.75rem] items-center justify-between gap-2 px-4">
         <a
           href="#profilim"
           className={cn(
-            "min-w-0 text-lg font-semibold tracking-normal transition-opacity",
+            "flex min-w-0 items-center gap-3 transition-opacity",
             isOpen ? "opacity-100" : "sr-only opacity-0"
           )}
         >
-          CV Agent
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+            <BriefcaseBusiness />
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate text-base font-semibold tracking-normal">
+              Kariyer Pilotu
+            </span>
+            <span className="block truncate text-xs text-muted-foreground">
+              Yapay Zeka Kariyer Stratejisi
+            </span>
+          </span>
         </a>
         <Button
           type="button"
           variant="ghost"
           size="icon"
-          aria-label={isOpen ? "Sidebar'ı kapat" : "Sidebar'ı aç"}
+          aria-label={isOpen ? "Menüyü daralt" : "Menüyü genişlet"}
           aria-expanded={isOpen}
-          title={isOpen ? "Sidebar'ı kapat" : "Sidebar'ı aç"}
+          title={isOpen ? "Menüyü daralt" : "Menüyü genişlet"}
           onClick={onToggle}
           className="shrink-0"
         >
@@ -83,18 +102,24 @@ export function AppSidebar({
 
       <Separator />
 
-      <nav className="flex flex-1 flex-col gap-1 px-3 py-4" aria-label="Sayfa bölümleri">
+      <nav
+        className="flex flex-1 flex-col gap-1 px-3 py-4"
+        aria-label="Sayfa bölümleri"
+      >
         {sidebarNavItems.map((item) => {
           const Icon = item.icon
+          const isActive = item.href === activeHref
 
           return (
             <Button
               key={item.href}
               asChild
-              variant="ghost"
+              variant={isActive ? "secondary" : "ghost"}
               size={isOpen ? "lg" : "icon-lg"}
               className={cn(
                 "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                isActive &&
+                  "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary hover:text-sidebar-primary-foreground",
                 isOpen ? "w-full justify-start" : "mx-auto"
               )}
             >
