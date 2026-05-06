@@ -13,7 +13,7 @@ import { ProfileChatService } from "./services/profile-chat-service"
 export function createApp(settings: Settings) {
   const userRepository = new UserRepository()
   const authService = new AuthService(userRepository, settings)
-  const profileChatService = new ProfileChatService()
+  const profileChatService = new ProfileChatService(settings)
 
   return new Elysia()
     .use(

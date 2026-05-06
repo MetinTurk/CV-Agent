@@ -38,3 +38,14 @@ export type RequiredProfileField = (typeof REQUIRED_PROFILE_FIELDS)[number]
 export type ProfileData = Static<typeof ProfileDataSchema>
 export type ProfileChatRequest = Static<typeof ProfileChatRequestSchema>
 export type ProfileChatResponse = Static<typeof ProfileChatResponseSchema>
+export type ProfilePatch = Partial<{
+  full_name: string
+  location: string
+  skills: string[]
+  projects: string[]
+  certifications: string[]
+  languages: string[]
+  work_experiences: string[]
+  education: string
+  additional_information: string
+}>

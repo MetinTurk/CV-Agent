@@ -106,15 +106,14 @@ export function getSettings(): Settings {
     corsAllowedOriginRegex:
       Bun.env.CORS_ALLOWED_ORIGIN_REGEX ?? defaultCorsAllowedOriginRegex,
     googleApiKey: optionalEnv(Bun.env.GOOGLE_API_KEY),
-    profileAgentModel:
-      Bun.env.PROFILE_AGENT_MODEL ?? "google_genai:gemini-3-pro-preview",
+    profileAgentModel: Bun.env.PROFILE_AGENT_MODEL ?? "gemini-3-flash-preview",
     profileAgentRequestTimeoutSeconds: parseNumberEnv(
       Bun.env.PROFILE_AGENT_REQUEST_TIMEOUT_SECONDS,
-      20
+      12
     ),
     profileAgentMaxRetries: parseIntegerEnv(
       Bun.env.PROFILE_AGENT_MAX_RETRIES,
-      1
+      0
     ),
   }
 
