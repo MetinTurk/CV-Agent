@@ -1,5 +1,5 @@
 // Module: Renders the saved user profile page after profile collection completes.
-import { useEffect, useState, type JSX } from "react"
+import { useEffect, useState, type FormEvent, type JSX } from "react"
 import {
   AlertCircle,
   BookOpen,
@@ -13,12 +13,18 @@ import {
 } from "lucide-react"
 
 import { Button } from "@workspace/ui/components/button"
+import { Input } from "@workspace/ui/components/input"
+import { Label } from "@workspace/ui/components/label"
 import { Separator } from "@workspace/ui/components/separator"
 
 import { AppSidebar } from "@/components/app-sidebar"
 import { ThemeToggle } from "@/components/theme-toggle"
 import type { AuthUser } from "@/lib/auth-api"
-import { getSavedProfile, type SavedProfileResponse } from "@/lib/profile-api"
+import {
+  getSavedProfile,
+  updateProfile,
+  type SavedProfileResponse,
+} from "@/lib/profile-api"
 import type { ProfileData } from "@/lib/profile-chat-api"
 
 type ProfilePageProps = {
@@ -39,7 +45,53 @@ type ProfileSectionProps = {
   children: JSX.Element
 }
 
+type ProfileFormState = {
+  full_name: string
+  location: string
+  skills: string
+  projects: string
+  certifications: string
+  languages: string
+  work_experiences: string
+  education: string
+  additional_information: string
+}
+
 const emptyText = "Henüz eklenmedi"
+
+function profileToForm(profile: ProfileData): ProfileFormState {
+  return {
+    full_name: profile.full_name ?? "",
+    location: profile.location ?? "",
+    skills: profile.skills.join("\n"),
+    projects: profile.projects.join("\n"),
+    certifications: profile.certifications.join("\n"),
+    languages: profile.languages.join("\n"),
+    work_experiences: profile.work_experiences.join("\n"),
+    education: profile.education ?? "",
+    additional_information: profile.additional_information ?? "",
+  }
+}
+
+function formToProfile(form: ProfileFormState): ProfileData {
+  const splitLines = (text: string): string[] =>
+    text
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean)
+
+  return {
+    full_name: form.full_name.trim() || null,
+    location: form.location.trim() || null,
+    skills: splitLines(form.skills),
+    projects: splitLines(form.projects),
+    certifications: splitLines(form.certifications),
+    languages: splitLines(form.languages),
+    work_experiences: splitLines(form.work_experiences),
+    education: form.education.trim() || null,
+    additional_information: form.additional_information.trim() || null,
+  }
+}
 
 export function ProfilePage({
   token,
@@ -134,7 +186,7 @@ export function ProfilePage({
             <ProfileContent
               profile={profileState.profile}
               updatedAt={profileState.updatedAt}
-              onProfileChatRequested={onProfileChatRequested}
+              token={token}
             />
           ) : null}
         </div>
@@ -144,14 +196,33 @@ export function ProfilePage({
 }
 
 function ProfileContent({
-  profile,
-  updatedAt,
-  onProfileChatRequested,
+  profile: initialProfile,
+  updatedAt: initialUpdatedAt,
+  token,
 }: {
   profile: ProfileData
   updatedAt: string
-  onProfileChatRequested: () => void
+  token: string
 }): JSX.Element {
+  const [isEditing, setIsEditing] = useState(false)
+  const [currentProfile, setCurrentProfile] = useState(initialProfile)
+  const [currentUpdatedAt, setCurrentUpdatedAt] = useState(initialUpdatedAt)
+
+  if (isEditing) {
+    return (
+      <ProfileEditForm
+        profile={currentProfile}
+        token={token}
+        onSave={(saved) => {
+          setCurrentProfile(saved.profile)
+          setCurrentUpdatedAt(saved.updated_at)
+          setIsEditing(false)
+        }}
+        onCancel={() => setIsEditing(false)}
+      />
+    )
+  }
+
   return (
     <>
       <section className="rounded-lg border border-border bg-card p-4 md:p-5">
@@ -159,10 +230,10 @@ function ProfileContent({
           <div className="min-w-0">
             <p className="text-sm text-muted-foreground">Kaydedilen Profil</p>
             <h2 className="truncate text-2xl font-semibold">
-              {profile.full_name ?? emptyText}
+              {currentProfile.full_name ?? emptyText}
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              {profile.location ?? emptyText}
+              {currentProfile.location ?? emptyText}
             </p>
           </div>
 
@@ -170,13 +241,13 @@ function ProfileContent({
             <Button
               type="button"
               variant="outline"
-              onClick={onProfileChatRequested}
+              onClick={() => setIsEditing(true)}
             >
               <Pencil data-icon="inline-start" />
               Profili Güncelle
             </Button>
             <p className="text-xs text-muted-foreground">
-              Son güncelleme: {formatDate(updatedAt)}
+              Son güncelleme: {formatDate(currentUpdatedAt)}
             </p>
           </div>
         </div>
@@ -184,34 +255,213 @@ function ProfileContent({
 
       <section className="grid gap-4 lg:grid-cols-2">
         <ProfileSection title="Yetenekler" icon={ListChecks}>
-          <TagList values={profile.skills} />
+          <TagList values={currentProfile.skills} />
         </ProfileSection>
 
         <ProfileSection title="Eğitim" icon={BookOpen}>
-          <TextValue value={profile.education} />
+          <TextValue value={currentProfile.education} />
         </ProfileSection>
 
         <ProfileSection title="Projeler" icon={BriefcaseBusiness}>
-          <BulletList values={profile.projects} />
+          <BulletList values={currentProfile.projects} />
         </ProfileSection>
 
         <ProfileSection title="İş Deneyimleri" icon={BriefcaseBusiness}>
-          <BulletList values={profile.work_experiences} />
+          <BulletList values={currentProfile.work_experiences} />
         </ProfileSection>
 
         <ProfileSection title="Sertifikalar" icon={Medal}>
-          <BulletList values={profile.certifications} />
+          <BulletList values={currentProfile.certifications} />
         </ProfileSection>
 
         <ProfileSection title="Diller" icon={Languages}>
-          <TagList values={profile.languages} />
+          <TagList values={currentProfile.languages} />
         </ProfileSection>
       </section>
 
       <ProfileSection title="Ek Bilgiler" icon={UserRound}>
-        <TextValue value={profile.additional_information} />
+        <TextValue value={currentProfile.additional_information} />
       </ProfileSection>
     </>
+  )
+}
+
+function ProfileEditForm({
+  profile,
+  token,
+  onSave,
+  onCancel,
+}: {
+  profile: ProfileData
+  token: string
+  onSave: (saved: SavedProfileResponse) => void
+  onCancel: () => void
+}): JSX.Element {
+  const [form, setForm] = useState<ProfileFormState>(() =>
+    profileToForm(profile)
+  )
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+
+  function handleChange(field: keyof ProfileFormState, value: string) {
+    setForm((prev) => ({ ...prev, [field]: value }))
+  }
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    setIsSaving(true)
+    setSaveError(null)
+
+    try {
+      const saved = await updateProfile(token, formToProfile(form))
+      onSave(saved)
+    } catch (error) {
+      setSaveError(
+        error instanceof Error ? error.message : "Profil kaydedilemedi."
+      )
+      setIsSaving(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <section className="rounded-lg border border-border bg-card p-4 md:p-5">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div className="flex min-w-0 flex-1 flex-col gap-3">
+            <p className="text-sm text-muted-foreground">Profil Düzenleniyor</p>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="full_name">Ad Soyad</Label>
+              <Input
+                id="full_name"
+                value={form.full_name}
+                onChange={(e) => handleChange("full_name", e.target.value)}
+                placeholder="Ad Soyad"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="location">Konum</Label>
+              <Input
+                id="location"
+                value={form.location}
+                onChange={(e) => handleChange("location", e.target.value)}
+                placeholder="Konum"
+              />
+            </div>
+          </div>
+
+          <div className="flex shrink-0 flex-col gap-2 pt-6 md:items-end">
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onCancel}
+                disabled={isSaving}
+              >
+                İptal
+              </Button>
+              <Button type="submit" disabled={isSaving}>
+                {isSaving ? "Kaydediliyor..." : "Kaydet"}
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {saveError ? (
+          <div className="mt-3 flex items-center gap-2 text-sm text-destructive">
+            <AlertCircle className="size-4 shrink-0" />
+            {saveError}
+          </div>
+        ) : null}
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-2">
+        <ProfileSection title="Yetenekler" icon={ListChecks}>
+          <FormTextArea
+            id="skills"
+            value={form.skills}
+            onChange={(v) => handleChange("skills", v)}
+            placeholder="Her satıra bir yetenek yazın"
+          />
+        </ProfileSection>
+
+        <ProfileSection title="Eğitim" icon={BookOpen}>
+          <FormTextArea
+            id="education"
+            value={form.education}
+            onChange={(v) => handleChange("education", v)}
+            placeholder="Eğitim bilgilerinizi yazın"
+          />
+        </ProfileSection>
+
+        <ProfileSection title="Projeler" icon={BriefcaseBusiness}>
+          <FormTextArea
+            id="projects"
+            value={form.projects}
+            onChange={(v) => handleChange("projects", v)}
+            placeholder="Her satıra bir proje yazın"
+          />
+        </ProfileSection>
+
+        <ProfileSection title="İş Deneyimleri" icon={BriefcaseBusiness}>
+          <FormTextArea
+            id="work_experiences"
+            value={form.work_experiences}
+            onChange={(v) => handleChange("work_experiences", v)}
+            placeholder="Her satıra bir iş deneyimi yazın"
+          />
+        </ProfileSection>
+
+        <ProfileSection title="Sertifikalar" icon={Medal}>
+          <FormTextArea
+            id="certifications"
+            value={form.certifications}
+            onChange={(v) => handleChange("certifications", v)}
+            placeholder="Her satıra bir sertifika yazın"
+          />
+        </ProfileSection>
+
+        <ProfileSection title="Diller" icon={Languages}>
+          <FormTextArea
+            id="languages"
+            value={form.languages}
+            onChange={(v) => handleChange("languages", v)}
+            placeholder="Her satıra bir dil yazın"
+          />
+        </ProfileSection>
+      </section>
+
+      <ProfileSection title="Ek Bilgiler" icon={UserRound}>
+        <FormTextArea
+          id="additional_information"
+          value={form.additional_information}
+          onChange={(v) => handleChange("additional_information", v)}
+          placeholder="Ek bilgilerinizi yazın"
+        />
+      </ProfileSection>
+    </form>
+  )
+}
+
+function FormTextArea({
+  id,
+  value,
+  onChange,
+  placeholder,
+}: {
+  id: string
+  value: string
+  onChange: (value: string) => void
+  placeholder?: string
+}): JSX.Element {
+  return (
+    <textarea
+      id={id}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      rows={4}
+      className="w-full resize-y rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+    />
   )
 }
 

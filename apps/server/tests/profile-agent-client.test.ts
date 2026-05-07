@@ -21,6 +21,7 @@ const testSettings: Settings = {
   corsAllowedOrigins: ["http://localhost:5173"],
   corsAllowedOriginRegex: null,
   groqApiKey: "test-groq-api-key",
+  openRouterApiKey: null,
   agentModel: "openai/gpt-oss-120b",
   agentRequestTimeoutSeconds: 20,
   agentMaxRetries: 0,
@@ -40,6 +41,7 @@ const testRequest: ProfileAgentRequest = {
     additional_information: null,
   },
   missingRequiredFields: ["full_name", "location", "skills", "education"],
+  coveredOptionalFields: [],
   conversationMessages: [],
 }
 

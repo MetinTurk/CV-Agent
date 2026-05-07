@@ -17,6 +17,7 @@ export type Settings = {
   corsAllowedOrigins: string[]
   corsAllowedOriginRegex: string | null
   groqApiKey: string | null
+  openRouterApiKey: string | null
   agentModel: string
   agentRequestTimeoutSeconds: number
   agentMaxRetries: number
@@ -106,7 +107,8 @@ export function getSettings(): Settings {
     corsAllowedOriginRegex:
       Bun.env.CORS_ALLOWED_ORIGIN_REGEX ?? defaultCorsAllowedOriginRegex,
     groqApiKey: optionalEnv(Bun.env.GROQ_API_KEY),
-    agentModel: Bun.env.AGENT_MODEL ?? "openai/gpt-oss-120b",
+    openRouterApiKey: optionalEnv(Bun.env.OPENROUTER_API_KEY),
+    agentModel: Bun.env.AGENT_MODEL ?? "qwen/qwen3-32b",
     agentRequestTimeoutSeconds: parseNumberEnv(
       Bun.env.AGENT_REQUEST_TIMEOUT_SECONDS,
       30

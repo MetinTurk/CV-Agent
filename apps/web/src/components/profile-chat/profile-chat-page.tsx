@@ -13,6 +13,7 @@ import {
   LogOut,
   MessageSquareText,
   Send,
+  SendHorizonal,
   UserRound,
 } from "lucide-react"
 
@@ -65,9 +66,23 @@ function getInitialMessage(user: AuthUser): ChatMessage {
     role: "assistant",
     content:
       `Merhaba ${user.first_name}. Ben Kariyer Yardımcı Pilotun. ` +
-      "İlana özel CV üretebilmem için önce profilini netleştirelim. " +
-      "Ad soyadın, yaşadığın şehir/ülke ve ana yeteneklerinle başlayalım.",
+      "Harikalar yaratabilmek için önce profilini netleştirelim. " +
+      "**Adın soyadın** ve **yaşadığın şehir/ülke** ile başlayalım.",
   }
+}
+
+function renderBoldText(content: string): JSX.Element {
+  const parts = content.split(/(\*\*[^*]+\*\*)/g)
+  return (
+    <>
+      {parts.map((part, index) => {
+        if (part.startsWith("**") && part.endsWith("**")) {
+          return <strong key={index}>{part.slice(2, -2)}</strong>
+        }
+        return <span key={index}>{part}</span>
+      })}
+    </>
+  )
 }
 
 function MessageBubble({ message }: { message: ChatMessage }): JSX.Element {
@@ -87,15 +102,8 @@ function MessageBubble({ message }: { message: ChatMessage }): JSX.Element {
         </div>
       ) : null}
 
-      <div
-        className={cn(
-          "max-w-[760px] rounded-lg border px-3.5 py-2.5 text-sm leading-6 shadow-sm",
-          isUserMessage
-            ? "border-primary bg-primary text-primary-foreground"
-            : "border-border bg-card text-card-foreground"
-        )}
-      >
-        {message.content}
+      <div className="max-w-[760px] text-base leading-7 text-foreground">
+        {renderBoldText(message.content)}
       </div>
 
       {isUserMessage ? (
@@ -242,8 +250,8 @@ export function ProfileChatPage({
     (sourceMode === "docx" && documentFile === null)
 
   return (
-    <main className="h-svh overflow-hidden bg-muted/30 p-3 md:p-4">
-      <section className="mx-auto flex h-full min-h-0 w-full max-w-[980px] flex-col gap-3">
+    <main className="h-200 overflow-hidden bg-muted/30 p-3 md:p-4">
+      <section className="mx-auto flex h-full min-h-0 w-full max-w-[800px] flex-col gap-3">
         <header className="flex h-12 shrink-0 items-center justify-between gap-4 px-1">
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
@@ -335,7 +343,7 @@ export function ProfileChatPage({
               />
             ) : null}
 
-            <div className="flex items-end gap-2.5">
+            <div className="flex items-end gap-2.5 relative">
               <textarea
                 ref={textareaRef}
                 value={inputValue}
@@ -348,16 +356,16 @@ export function ProfileChatPage({
                 disabled={isSending}
                 onChange={(event) => setInputValue(event.target.value)}
                 onKeyDown={handleKeyDown}
-                className="min-h-10 flex-1 resize-none rounded-lg border border-input bg-background px-3 py-2.5 text-sm leading-5 transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50"
+                className="min-h-12 flex-1 resize-none rounded-lg border border-input bg-background px-3 py-3.5 text-sm leading-5 transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50"
               />
               <Button
                 type="submit"
                 size="icon-lg"
                 aria-label="Mesajı gönder"
                 disabled={isSubmitDisabled}
-                className="size-10 rounded-lg"
+                className="size-10 rounded-full absolute right-2 top-1"
               >
-                <Send className="size-4.5" />
+                <SendHorizonal className="size-4.5" />
               </Button>
             </div>
           </form>

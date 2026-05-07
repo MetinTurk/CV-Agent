@@ -31,6 +31,42 @@ function getErrorMessage(payload: unknown): string {
   return "Profil bilgisi alınamadı."
 }
 
+export async function updateProfile(
+  token: string,
+  profileData: ProfileData
+): Promise<SavedProfileResponse> {
+  let response: Response
+
+  try {
+    response = await fetch(`${API_BASE_URL}/profile`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(profileData),
+    })
+  } catch {
+    throw new Error(
+      "API sunucusuna ulaşılamadı. Lütfen server'ın çalıştığını ve API adresinin doğru olduğunu kontrol edin."
+    )
+  }
+
+  if (!response.ok) {
+    let errorPayload: unknown = null
+
+    try {
+      errorPayload = await response.json()
+    } catch {
+      throw new Error("Profil güncellenemedi.")
+    }
+
+    throw new Error(getErrorMessage(errorPayload))
+  }
+
+  return response.json() as Promise<SavedProfileResponse>
+}
+
 export async function getSavedProfile(
   token: string
 ): Promise<SavedProfileResponse> {
