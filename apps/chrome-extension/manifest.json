@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Career Co-pilot",
+  "description": "Bulunduğunuz iş ilanı sayfasından analiz akışını başlatan CV Agent uzantısı.",
+  "version": "1.0.4",
+  "action": {
+    "default_title": "Career Co-pilot",
+    "default_popup": "popup.html"
+  }
+}
