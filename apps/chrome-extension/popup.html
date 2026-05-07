@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Career Co-pilot</title>
     <link rel="stylesheet" href="./popup.css" />
+    <script src="./popup.js" defer></script>
   </head>
   <body>
     <main class="popup-shell" aria-label="Career Co-pilot uzantısı">
@@ -26,13 +27,13 @@
             <span></span>
             <span></span>
           </span>
-          <h2 id="collector-title">İş İlanı Bilgisi Topla</h2>
+          <h2 id="collector-title">İş İlanı Bilgileri</h2>
         </div>
 
         <div class="card-content">
           <p>
-            Şu an görüntülediğiniz sayfadaki iş ilanı detaylarını,
-            gereksinimleri ve nitelikleri yapay zeka ile otomatik çıkarın.
+            Şu an görüntülediğiniz sayfadaki iş ilanı detaylarını önce
+            toplayın, ardından analizi başlatın.
           </p>
           <div class="scan-illustration" aria-hidden="true">
             <span class="page-corner"></span>
@@ -41,10 +42,20 @@
           </div>
         </div>
 
-        <button class="primary-action" type="button">
-          <span class="action-icon" aria-hidden="true"></span>
-          İş İlanını Analiz Et
-        </button>
+        <p class="status-message" data-status-message>
+          Analiz için önce iş ilanı bilgilerini toplayın.
+        </p>
+
+        <div class="action-stack">
+          <button class="secondary-action" type="button" data-collect-button>
+            <span class="collect-icon" aria-hidden="true"></span>
+            <span data-collect-label>İş İlanı Bilgilerini Topla</span>
+          </button>
+          <button class="primary-action" type="button" data-analyze-button disabled>
+            <span class="action-icon" aria-hidden="true"></span>
+            İş İlanını Analiz Et
+          </button>
+        </div>
       </section>
 
       <footer>v1.0.4 • Akıllı Kariyer Asistanı</footer>
