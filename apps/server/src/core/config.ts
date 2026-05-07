@@ -1,7 +1,7 @@
 // Module: Defines typed runtime settings for the Elysia application.
 const DEFAULT_CORS_ALLOWED_ORIGINS = ["http://localhost:5173"]
 const DEFAULT_DEVELOPMENT_CORS_ORIGIN_REGEX =
-  "^http://(localhost|127\\.0\\.0\\.1):[0-9]+$"
+  "^(http://(localhost|127\\.0\\.0\\.1):[0-9]+|chrome-extension://[a-z]{32})$"
 const DEFAULT_DATABASE_URL =
   "postgres://postgres:postgres@localhost:5432/cv_agent"
 

@@ -6,6 +6,8 @@ import { JobAnalysisRepository } from "../db/repositories/job-analyses"
 import { ProfileRepository } from "../db/repositories/profiles"
 import type { JobAnalysisRecord, UserRecord } from "../db/schema"
 import type {
+  ExtractedJobPosting,
+  JobAnalysisCreateRequest,
   JobAnalysisResponse,
   JobDescription,
   MatchAnalysis,
@@ -45,12 +47,15 @@ export class JobAnalysisService {
 
   async analyzeAndSave(
     user: UserRecord,
-    url: string
+    request: JobAnalysisCreateRequest
   ): Promise<JobAnalysisResponse> {
-    const sourceContext = await this.sourceService.extract({
-      type: "url",
-      url,
-    })
+    const sourceContext =
+      "jobPosting" in request
+        ? extractExtensionSourceContext(request.jobPosting)
+        : await this.sourceService.extract({
+            type: "url",
+            url: request.url,
+          })
 
     const jobDescription: JobDescription =
       await this.agentClient.generateJobDescription({
@@ -84,14 +89,38 @@ export class JobAnalysisService {
 
     return toResponse(record)
   }
+
+  async getByIdForUser(
+    analysisId: string,
+    user: UserRecord
+  ): Promise<JobAnalysisResponse | null> {
+    const record = await this.repository.getByIdForUser(analysisId, user.id)
+    return record === null ? null : toResponse(record)
+  }
+}
+
+function extractExtensionSourceContext(jobPosting: ExtractedJobPosting): {
+  type: "url"
+  label: string
+  content: string
+} {
+  return {
+    type: "url",
+    label: jobPosting.sourceUrl,
+    content: jobPosting.descriptionText,
+  }
 }
 
 function toResponse(record: JobAnalysisRecord): JobAnalysisResponse {
+  const redirectUrl = `/job-analysis/${record.id}`
+
   return {
     id: record.id,
     url: record.url,
     job_description: record.jobDescription,
     match_analysis: record.matchAnalysis ?? null,
     created_at: record.createdAt.toISOString(),
+    status: "completed",
+    redirect_url: redirectUrl,
   }
 }

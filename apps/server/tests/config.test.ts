@@ -10,13 +10,13 @@ afterEach(() => {
   resetSettingsCache()
 })
 
-test("default agent model is the Groq gpt-oss-120b model", () => {
+test("default agent model is the configured OpenRouter Qwen model", () => {
   delete Bun.env.AGENT_MODEL
   resetSettingsCache()
 
   const settings = getSettings()
 
-  expect(settings.agentModel).toBe("openai/gpt-oss-120b")
+  expect(settings.agentModel).toBe("qwen/qwen3-32b")
 })
 
 test("default agent request settings avoid long pending responses", () => {
@@ -37,4 +37,15 @@ test("agent model can be overridden", () => {
   const settings = getSettings()
 
   expect(settings.agentModel).toBe("openai/gpt-oss-20b")
+})
+
+test("development CORS origin regex allows Chrome extensions", () => {
+  resetSettingsCache()
+
+  const settings = getSettings()
+  const originPattern = new RegExp(settings.corsAllowedOriginRegex ?? "")
+
+  expect(
+    originPattern.test("chrome-extension://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+  ).toBe(true)
 })

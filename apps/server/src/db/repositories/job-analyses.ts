@@ -1,5 +1,5 @@
 // Module: Provides job analysis persistence operations behind a repository boundary.
-import { desc, eq } from "drizzle-orm"
+import { and, desc, eq } from "drizzle-orm"
 
 import { db } from "../client"
 import { jobAnalyses, type JobAnalysisRecord } from "../schema"
@@ -42,5 +42,18 @@ export class JobAnalysisRepository {
       .from(jobAnalyses)
       .where(eq(jobAnalyses.userId, userId))
       .orderBy(desc(jobAnalyses.createdAt))
+  }
+
+  async getByIdForUser(
+    analysisId: string,
+    userId: string
+  ): Promise<JobAnalysisRecord | null> {
+    const [record] = await db
+      .select()
+      .from(jobAnalyses)
+      .where(and(eq(jobAnalyses.id, analysisId), eq(jobAnalyses.userId, userId)))
+      .limit(1)
+
+    return record ?? null
   }
 }
