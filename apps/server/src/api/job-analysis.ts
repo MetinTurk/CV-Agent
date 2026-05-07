@@ -1,4 +1,4 @@
-// Module: Exposes the authenticated job analysis (URL → structured description) endpoint.
+// Module: Exposes authenticated job analysis creation and detail endpoints.
 import { Elysia } from "elysia"
 
 import { ErrorResponseSchema } from "../schemas/error"
@@ -25,61 +25,128 @@ export function createJobAnalysisRoutes(
   return new Elysia({
     name: "job-analysis-routes",
     prefix: "/job-analyses",
-  }).post(
-    "",
-    async ({ body, headers, status }) => {
-      try {
-        const currentUser = await authService.authenticateAuthorizationHeader(
-          headers.authorization
-        )
+  })
+    .post(
+      "",
+      async ({ body, headers, status }) => {
+        try {
+          const currentUser = await authService.authenticateAuthorizationHeader(
+            headers.authorization
+          )
 
-        return await jobAnalysisService.analyzeAndSave(currentUser, body.url)
-      } catch (error) {
-        if (
-          error instanceof AuthenticationRequiredError ||
-          error instanceof InvalidTokenError
-        ) {
-          return status(401, {
-            detail: "Invalid or expired token",
-          })
-        }
+          return await jobAnalysisService.analyzeAndSave(currentUser, body)
+        } catch (error) {
+          if (
+            error instanceof AuthenticationRequiredError ||
+            error instanceof InvalidTokenError
+          ) {
+            return status(401, {
+              detail: "Invalid or expired token",
+            })
+          }
 
-        if (error instanceof ProfileSourceExtractionError) {
-          return status(400, {
-            detail: error.message,
-          })
-        }
+          if (error instanceof ProfileSourceExtractionError) {
+            return status(400, {
+              detail: error.message,
+            })
+          }
 
-        if (error instanceof JobAnalysisAgentConfigurationError) {
+          if (error instanceof JobAnalysisAgentConfigurationError) {
+            return status(500, {
+              detail: error.message,
+            })
+          }
+
+          if (error instanceof JobAnalysisAgentRequestError) {
+            console.error(
+              "[job-analysis] agent request error:",
+              error.message,
+              error.cause
+            )
+            return status(502, {
+              detail: error.message,
+            })
+          }
+
+          console.error("İş analizi endpoint'inde beklenmeyen hata", error)
+
           return status(500, {
-            detail: error.message,
+            detail: "Beklenmeyen bir sunucu hatası oluştu. Lütfen tekrar deneyin.",
           })
         }
-
-        if (error instanceof JobAnalysisAgentRequestError) {
-          console.error("[job-analysis] agent request error:", error.message, error.cause)
-          return status(502, {
-            detail: error.message,
-          })
-        }
-
-        console.error("İş analizi endpoint'inde beklenmeyen hata", error)
-
-        return status(500, {
-          detail:
-            "Beklenmeyen bir sunucu hatası oluştu. Lütfen tekrar deneyin.",
-        })
-      }
-    },
-    {
-      body: JobAnalysisCreateRequestSchema,
-      response: {
-        200: JobAnalysisResponseSchema,
-        400: ErrorResponseSchema,
-        401: ErrorResponseSchema,
-        502: ErrorResponseSchema,
-        500: ErrorResponseSchema,
       },
-    }
-  )
+      {
+        body: JobAnalysisCreateRequestSchema,
+        response: {
+          200: JobAnalysisResponseSchema,
+          400: ErrorResponseSchema,
+          401: ErrorResponseSchema,
+          502: ErrorResponseSchema,
+          500: ErrorResponseSchema,
+        },
+      }
+    )
+    .get(
+      "/:analysisId",
+      async ({ headers, params, status }) => {
+        try {
+          const currentUser = await authService.authenticateAuthorizationHeader(
+            headers.authorization
+          )
+          const analysis = await jobAnalysisService.getByIdForUser(
+            params.analysisId,
+            currentUser
+          )
+
+          if (analysis === null) {
+            return status(404, {
+              detail: "İş analizi bulunamadı.",
+            })
+          }
+
+          return analysis
+        } catch (error) {
+          if (
+            error instanceof AuthenticationRequiredError ||
+            error instanceof InvalidTokenError
+          ) {
+            return status(401, {
+              detail: "Invalid or expired token",
+            })
+          }
+
+          if (error instanceof JobAnalysisAgentRequestError) {
+            console.error(
+              "[job-analysis] agent request error:",
+              error.message,
+              error.cause
+            )
+            return status(502, {
+              detail: error.message,
+            })
+          }
+
+          if (error instanceof JobAnalysisAgentConfigurationError) {
+            return status(500, {
+              detail: error.message,
+            })
+          }
+
+          console.error("İş analizi detayı endpoint'inde beklenmeyen hata", error)
+
+          return status(500, {
+            detail: "Beklenmeyen bir sunucu hatası oluştu. Lütfen tekrar deneyin.",
+          })
+        }
+      },
+      {
+        response: {
+          200: JobAnalysisResponseSchema,
+          401: ErrorResponseSchema,
+          404: ErrorResponseSchema,
+          502: ErrorResponseSchema,
+          500: ErrorResponseSchema,
+        },
+      }
+    )
 }

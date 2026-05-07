@@ -20,9 +20,68 @@ export const MatchAnalysisSchema = t.Object({
   tavsiyeler: t.Array(t.String()),
 })
 
-export const JobAnalysisCreateRequestSchema = t.Object({
+export const JobSourceSiteSchema = t.Union([
+  t.Literal("linkedin"),
+  t.Literal("kariyer-net"),
+  t.Literal("indeed"),
+  t.Literal("generic"),
+])
+
+export const WorkplaceTypeSchema = t.Union([
+  t.Literal("remote"),
+  t.Literal("hybrid"),
+  t.Literal("onsite"),
+  t.Literal("unknown"),
+])
+
+export const JobPostingLanguageSchema = t.Union([
+  t.Literal("tr"),
+  t.Literal("en"),
+  t.Literal("unknown"),
+])
+
+export const ExtractedJobPostingSchema = t.Object({
+  sourceUrl: t.String({ format: "uri", minLength: 1, maxLength: 4096 }),
+  sourceSite: JobSourceSiteSchema,
+  title: t.Nullable(t.String({ minLength: 1, maxLength: 240 })),
+  companyName: t.Nullable(t.String({ minLength: 1, maxLength: 180 })),
+  location: t.Nullable(t.String({ minLength: 1, maxLength: 180 })),
+  employmentType: t.Nullable(t.String({ minLength: 1, maxLength: 120 })),
+  workplaceType: WorkplaceTypeSchema,
+  descriptionText: t.String({ minLength: 200, maxLength: 24000 }),
+  requirements: t.Array(t.String({ minLength: 1, maxLength: 240 }), {
+    maxItems: 20,
+  }),
+  responsibilities: t.Array(t.String({ minLength: 1, maxLength: 280 }), {
+    maxItems: 20,
+  }),
+  benefits: t.Array(t.String({ minLength: 1, maxLength: 240 }), {
+    maxItems: 12,
+  }),
+  seniority: t.Nullable(t.String({ minLength: 1, maxLength: 120 })),
+  language: JobPostingLanguageSchema,
+  extractedAt: t.String({ minLength: 1, maxLength: 64 }),
+})
+
+export const JobAnalysisSourceSchema = t.Object({
+  kind: t.Literal("chrome-extension"),
+  extensionVersion: t.String({ minLength: 1, maxLength: 24 }),
+  tabId: t.Optional(t.Number()),
+})
+
+export const UrlJobAnalysisCreateRequestSchema = t.Object({
   url: t.String({ minLength: 1, maxLength: 2048 }),
 })
+
+export const ExtensionJobAnalysisCreateRequestSchema = t.Object({
+  jobPosting: ExtractedJobPostingSchema,
+  source: JobAnalysisSourceSchema,
+})
+
+export const JobAnalysisCreateRequestSchema = t.Union([
+  UrlJobAnalysisCreateRequestSchema,
+  ExtensionJobAnalysisCreateRequestSchema,
+])
 
 export const JobAnalysisResponseSchema = t.Object({
   id: t.String(),
@@ -30,10 +89,14 @@ export const JobAnalysisResponseSchema = t.Object({
   job_description: JobDescriptionSchema,
   match_analysis: t.Nullable(MatchAnalysisSchema),
   created_at: t.String(),
+  status: t.Literal("completed"),
+  redirect_url: t.String(),
 })
 
 export type JobDescription = Static<typeof JobDescriptionSchema>
 export type MatchAnalysis = Static<typeof MatchAnalysisSchema>
+export type ExtractedJobPosting = Static<typeof ExtractedJobPostingSchema>
+export type JobAnalysisSource = Static<typeof JobAnalysisSourceSchema>
 export type JobAnalysisCreateRequest = Static<
   typeof JobAnalysisCreateRequestSchema
 >
