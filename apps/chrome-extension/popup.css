@@ -13,7 +13,7 @@
 
 body {
   width: 358px;
-  min-height: 288px;
+  min-height: 326px;
   margin: 0;
   background: #eef1f5;
 }
@@ -23,7 +23,7 @@ button {
 }
 
 .popup-shell {
-  min-height: 288px;
+  min-height: 326px;
   overflow: hidden;
   background: #f8fafc;
   border: 1px solid #cfd5df;
@@ -242,8 +242,89 @@ button {
   cursor: pointer;
 }
 
-.primary-action:hover {
+.primary-action:hover:not(:disabled) {
   background: #0457b8;
+}
+
+.primary-action:disabled {
+  color: #6b7280;
+  background: #e6ebf2;
+  border-color: #cbd3df;
+  cursor: not-allowed;
+}
+
+.status-message {
+  min-height: 18px;
+  margin: 13px 0 0;
+  color: #526173;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.action-stack {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.secondary-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 36px;
+  gap: 7px;
+  color: #075fc7;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0;
+  background: #eef5ff;
+  border: 1px solid #9bc1f4;
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.secondary-action:hover {
+  background: #e3efff;
+}
+
+.secondary-action.is-complete {
+  color: #067647;
+  background: #e8f8ef;
+  border-color: #9bd9b8;
+}
+
+.collect-icon {
+  position: relative;
+  width: 15px;
+  height: 13px;
+  border: 1.6px solid currentColor;
+  border-radius: 2px;
+}
+
+.collect-icon::before,
+.collect-icon::after {
+  position: absolute;
+  content: "";
+}
+
+.collect-icon::before {
+  top: -5px;
+  left: 4px;
+  width: 5px;
+  height: 4px;
+  border: 1.5px solid currentColor;
+  border-bottom: 0;
+  border-radius: 2px 2px 0 0;
+}
+
+.collect-icon::after {
+  top: 4px;
+  left: 3px;
+  width: 7px;
+  height: 1.5px;
+  background: currentColor;
+  box-shadow: 0 4px 0 currentColor;
 }
 
 .action-icon {
