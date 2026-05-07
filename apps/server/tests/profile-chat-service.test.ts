@@ -18,6 +18,7 @@ const testSettings: Settings = {
   corsAllowedOrigins: ["http://localhost:5173"],
   corsAllowedOriginRegex: null,
   groqApiKey: "test-groq-api-key",
+  openRouterApiKey: null,
   agentModel: "openai/gpt-oss-120b",
   agentRequestTimeoutSeconds: 20,
   agentMaxRetries: 1,
@@ -48,6 +49,7 @@ test("profile chat sends user messages to the LLM agent", async () => {
             location: "İstanbul",
             skills: ["React", "TypeScript"],
           },
+          askedAbout: [],
         }
       },
     },
@@ -88,6 +90,7 @@ test("profile chat forwards extracted source context to the LLM agent", async ()
         profilePatch: {
           projects: ["Kariyer takip paneli"],
         },
+        askedAbout: [],
       }
     },
   })
@@ -143,6 +146,13 @@ test("profile chat saves profile and returns redirect when required fields are c
             skills: ["React", "TypeScript"],
             education: "Boğaziçi Üniversitesi Bilgisayar Mühendisliği",
           },
+          askedAbout: [
+            "work_experiences",
+            "projects",
+            "certifications",
+            "languages",
+            "additional_information",
+          ],
         }
       },
     },

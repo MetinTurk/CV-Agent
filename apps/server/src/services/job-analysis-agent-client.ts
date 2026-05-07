@@ -1,4 +1,4 @@
-// Module: Calls the Groq job-analysis agent (gpt-oss) and validates its structured JSON reply.
+// Module: Calls the Groq job-analysis agent (qwen3-32b) and validates its structured JSON reply.
 import type { Settings } from "../core/config"
 import type {
   JobDescription,

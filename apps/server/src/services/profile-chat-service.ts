@@ -12,6 +12,7 @@ import {
   type RequiredProfileField,
 } from "../schemas/profile-chat"
 import {
+  OPTIONAL_PROFILE_FIELDS,
   ProfileAgentClient,
   type ProfileAgentRequest,
   type ProfileAgentResult,
@@ -20,6 +21,7 @@ import {
 type ProfileConversationState = {
   messages: Array<{ role: "user" | "assistant"; content: string }>
   profile: ProfileData
+  coveredOptionalFields: Set<string>
 }
 
 type ProfileAgent = {
@@ -71,15 +73,30 @@ export class ProfileChatService {
       sourceContext,
       profile: conversation.profile,
       missingRequiredFields: missingRequiredFieldsBeforeMessage,
+      coveredOptionalFields: [...conversation.coveredOptionalFields],
       conversationMessages: conversation.messages,
     })
 
     const patch = agentResult.profilePatch
     conversation.profile = mergeProfile(conversation.profile, patch)
 
+    for (const field of agentResult.askedAbout) {
+      conversation.coveredOptionalFields.add(field)
+    }
+    for (const field of OPTIONAL_PROFILE_FIELDS) {
+      const value = conversation.profile[field]
+      const hasData = Array.isArray(value) ? value.length > 0 : value !== null
+      if (hasData) {
+        conversation.coveredOptionalFields.add(field)
+      }
+    }
+
     const missingRequiredFields = getMissingRequiredFields(conversation.profile)
     const reply = normalizeRequiredText(agentResult.reply)
-    const isProfileReady = missingRequiredFields.length === 0
+    const allOptionalCovered = OPTIONAL_PROFILE_FIELDS.every((f) =>
+      conversation.coveredOptionalFields.has(f)
+    )
+    const isProfileReady = missingRequiredFields.length === 0 && allOptionalCovered
 
     conversation.messages = [
       ...conversation.messages,
@@ -126,6 +143,7 @@ export class ProfileChatService {
         languages: [],
         work_experiences: [],
       },
+      coveredOptionalFields: new Set(),
     }
     this.conversations.set(conversationKey, conversation)
 
