@@ -5,6 +5,22 @@ import { db } from "../client"
 import { type ProfileRecord, profiles } from "../schema"
 import type { ProfileData } from "../../schemas/profile-chat"
 
+type ProfileListField = "projects" | "certifications"
+
+function createEmptyProfileData(): ProfileData {
+  return {
+    full_name: null,
+    location: null,
+    skills: [],
+    projects: [],
+    certifications: [],
+    languages: [],
+    work_experiences: [],
+    education: null,
+    additional_information: null,
+  }
+}
+
 export class ProfileRepository {
   async getByUserId(userId: string): Promise<ProfileRecord | null> {
     const [profile] = await db
@@ -40,5 +56,34 @@ export class ProfileRepository {
     }
 
     return profile
+  }
+
+  async appendProject(userId: string, project: string): Promise<ProfileRecord> {
+    return this.appendListItem(userId, "projects", project)
+  }
+
+  private async appendListItem(
+    userId: string,
+    field: ProfileListField,
+    value: string
+  ): Promise<ProfileRecord> {
+    const existingProfile = await this.getByUserId(userId)
+    const profileData = existingProfile?.data ?? createEmptyProfileData()
+    const trimmedValue = value.trim()
+    const currentValues = profileData[field]
+    const hasExistingValue = currentValues.some(
+      (item) =>
+        item.trim().toLocaleLowerCase("tr-TR") ===
+        trimmedValue.toLocaleLowerCase("tr-TR")
+    )
+
+    if (hasExistingValue) {
+      return existingProfile ?? this.upsertForUser(userId, profileData)
+    }
+
+    return this.upsertForUser(userId, {
+      ...profileData,
+      [field]: [...currentValues, trimmedValue],
+    })
   }
 }
