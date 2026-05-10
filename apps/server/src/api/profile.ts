@@ -4,7 +4,10 @@ import { Elysia } from "elysia"
 import { ProfileRepository } from "../db/repositories/profiles"
 import { ErrorResponseSchema } from "../schemas/error"
 import { ProfileDataSchema } from "../schemas/profile-chat"
-import { SavedProfileResponseSchema } from "../schemas/profile"
+import {
+  ProfileProjectLinkRequestSchema,
+  SavedProfileResponseSchema,
+} from "../schemas/profile"
 import {
   AuthenticationRequiredError,
   AuthService,
@@ -91,7 +94,10 @@ export function createProfileRoutes(
             })
           }
 
-          console.error("Profil güncelleme endpoint'inde beklenmeyen hata", error)
+          console.error(
+            "Profil güncelleme endpoint'inde beklenmeyen hata",
+            error
+          )
 
           return status(500, {
             detail:
@@ -103,6 +109,57 @@ export function createProfileRoutes(
         body: ProfileDataSchema,
         response: {
           200: SavedProfileResponseSchema,
+          401: ErrorResponseSchema,
+          500: ErrorResponseSchema,
+        },
+      }
+    )
+    .post(
+      "/projects",
+      async ({ headers, body, status }) => {
+        try {
+          const currentUser = await authService.authenticateAuthorizationHeader(
+            headers.authorization
+          )
+          const parsedUrl = new URL(body.url)
+          const profile = await profileRepository.appendProject(
+            currentUser.id,
+            parsedUrl.toString()
+          )
+
+          return {
+            profile: profile.data,
+            updated_at: profile.updatedAt.toISOString(),
+          }
+        } catch (error) {
+          if (
+            error instanceof AuthenticationRequiredError ||
+            error instanceof InvalidTokenError
+          ) {
+            return status(401, {
+              detail: "Invalid or expired token",
+            })
+          }
+
+          if (error instanceof TypeError) {
+            return status(400, {
+              detail: "Geçerli bir proje bağlantısı girin.",
+            })
+          }
+
+          console.error("Proje ekleme endpoint'inde beklenmeyen hata", error)
+
+          return status(500, {
+            detail:
+              "Beklenmeyen bir sunucu hatası oluştu. Lütfen tekrar deneyin.",
+          })
+        }
+      },
+      {
+        body: ProfileProjectLinkRequestSchema,
+        response: {
+          200: SavedProfileResponseSchema,
+          400: ErrorResponseSchema,
           401: ErrorResponseSchema,
           500: ErrorResponseSchema,
         },
