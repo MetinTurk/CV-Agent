@@ -62,6 +62,13 @@ export class ProfileRepository {
     return this.appendListItem(userId, "projects", project)
   }
 
+  async appendCertification(
+    userId: string,
+    certification: string
+  ): Promise<ProfileRecord> {
+    return this.appendListItem(userId, "certifications", certification)
+  }
+
   private async appendListItem(
     userId: string,
     field: ProfileListField,

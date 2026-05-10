@@ -5,6 +5,8 @@ import { ProfileRepository } from "../db/repositories/profiles"
 import { ErrorResponseSchema } from "../schemas/error"
 import { ProfileDataSchema } from "../schemas/profile-chat"
 import {
+  ProfileCertificationDocumentRequestSchema,
+  ProfileCertificationLinkRequestSchema,
   ProfileProjectLinkRequestSchema,
   SavedProfileResponseSchema,
 } from "../schemas/profile"
@@ -161,6 +163,111 @@ export function createProfileRoutes(
           200: SavedProfileResponseSchema,
           400: ErrorResponseSchema,
           401: ErrorResponseSchema,
+          500: ErrorResponseSchema,
+        },
+      }
+    )
+    .post(
+      "/certifications",
+      async ({ headers, body, status }) => {
+        try {
+          const currentUser = await authService.authenticateAuthorizationHeader(
+            headers.authorization
+          )
+          const parsedUrl = new URL(body.url)
+          const profile = await profileRepository.appendCertification(
+            currentUser.id,
+            parsedUrl.toString()
+          )
+
+          return {
+            profile: profile.data,
+            updated_at: profile.updatedAt.toISOString(),
+          }
+        } catch (error) {
+          if (
+            error instanceof AuthenticationRequiredError ||
+            error instanceof InvalidTokenError
+          ) {
+            return status(401, {
+              detail: "Invalid or expired token",
+            })
+          }
+
+          if (error instanceof TypeError) {
+            return status(400, {
+              detail: "Geçerli bir sertifika bağlantısı girin.",
+            })
+          }
+
+          console.error(
+            "Sertifika ekleme endpoint'inde beklenmeyen hata",
+            error
+          )
+
+          return status(500, {
+            detail:
+              "Beklenmeyen bir sunucu hatası oluştu. Lütfen tekrar deneyin.",
+          })
+        }
+      },
+      {
+        body: ProfileCertificationLinkRequestSchema,
+        response: {
+          200: SavedProfileResponseSchema,
+          400: ErrorResponseSchema,
+          401: ErrorResponseSchema,
+          500: ErrorResponseSchema,
+        },
+      }
+    )
+    .post(
+      "/certifications/document",
+      async ({ headers, body, status }) => {
+        try {
+          const currentUser = await authService.authenticateAuthorizationHeader(
+            headers.authorization
+          )
+          const fileName =
+            body.document.name.trim().length > 0
+              ? body.document.name.trim()
+              : "Yüklenen sertifika belgesi"
+          const profile = await profileRepository.appendCertification(
+            currentUser.id,
+            `Belge: ${fileName}`
+          )
+
+          return {
+            profile: profile.data,
+            updated_at: profile.updatedAt.toISOString(),
+          }
+        } catch (error) {
+          if (
+            error instanceof AuthenticationRequiredError ||
+            error instanceof InvalidTokenError
+          ) {
+            return status(401, {
+              detail: "Invalid or expired token",
+            })
+          }
+
+          console.error(
+            "Sertifika belge yükleme endpoint'inde beklenmeyen hata",
+            error
+          )
+
+          return status(500, {
+            detail:
+              "Beklenmeyen bir sunucu hatası oluştu. Lütfen tekrar deneyin.",
+          })
+        }
+      },
+      {
+        body: ProfileCertificationDocumentRequestSchema,
+        response: {
+          200: SavedProfileResponseSchema,
+          401: ErrorResponseSchema,
+          422: ErrorResponseSchema,
           500: ErrorResponseSchema,
         },
       }
