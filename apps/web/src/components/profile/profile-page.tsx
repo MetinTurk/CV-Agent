@@ -1,9 +1,16 @@
 // Module: Renders the saved user profile page after profile collection completes.
-import { useEffect, useState, type FormEvent, type JSX } from "react"
+import {
+  useEffect,
+  useState,
+  type DragEvent,
+  type FormEvent,
+  type JSX,
+} from "react"
 import {
   AlertCircle,
   BookOpen,
   BriefcaseBusiness,
+  FileText,
   Info,
   Languages,
   Link,
@@ -13,6 +20,7 @@ import {
   Pencil,
   Plus,
   Sparkles,
+  Upload,
   UserRound,
 } from "lucide-react"
 
@@ -31,6 +39,7 @@ import {
   FieldError,
   FieldGroup,
   FieldLabel,
+  FieldSeparator,
 } from "@workspace/ui/components/field"
 import { Input } from "@workspace/ui/components/input"
 import { Label } from "@workspace/ui/components/label"
@@ -40,9 +49,11 @@ import { AppSidebar } from "@/components/app-sidebar"
 import { ThemeToggle } from "@/components/theme-toggle"
 import type { AuthUser } from "@/lib/auth-api"
 import {
+  addProfileCertification,
   addProfileProject,
   getSavedProfile,
   updateProfile,
+  uploadProfileCertificationDocument,
   type SavedProfileResponse,
 } from "@/lib/profile-api"
 import type { ProfileData } from "@/lib/profile-chat-api"
@@ -79,6 +90,12 @@ type ProfileFormState = {
 }
 
 const emptyText = "Henüz eklenmedi"
+const CERTIFICATE_MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024
+const CERTIFICATE_ALLOWED_FILE_TYPES = [
+  "application/pdf",
+  "image/png",
+  "image/jpeg",
+] as const
 
 function profileToForm(profile: ProfileData): ProfileFormState {
   return {
@@ -229,6 +246,8 @@ function ProfileContent({
   const [currentProfile, setCurrentProfile] = useState(initialProfile)
   const [currentUpdatedAt, setCurrentUpdatedAt] = useState(initialUpdatedAt)
   const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false)
+  const [isCertificationDialogOpen, setIsCertificationDialogOpen] =
+    useState(false)
 
   if (isEditing) {
     return (
@@ -305,7 +324,20 @@ function ProfileContent({
           <BulletList values={currentProfile.work_experiences} />
         </ProfileSection>
 
-        <ProfileSection title="Sertifikalar" icon={Medal}>
+        <ProfileSection
+          title="Sertifikalar"
+          icon={Medal}
+          action={
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setIsCertificationDialogOpen(true)}
+            >
+              <Plus data-icon="inline-start" />
+              Ekle
+            </Button>
+          }
+        >
           <BulletList values={currentProfile.certifications} />
         </ProfileSection>
 
@@ -322,6 +354,16 @@ function ProfileContent({
         open={isProjectDialogOpen}
         token={token}
         onOpenChange={setIsProjectDialogOpen}
+        onSaved={(saved) => {
+          setCurrentProfile(saved.profile)
+          setCurrentUpdatedAt(saved.updated_at)
+        }}
+      />
+
+      <AddCertificationDialog
+        open={isCertificationDialogOpen}
+        token={token}
+        onOpenChange={setIsCertificationDialogOpen}
         onSaved={(saved) => {
           setCurrentProfile(saved.profile)
           setCurrentUpdatedAt(saved.updated_at)
@@ -464,6 +506,252 @@ function AddProjectDialog({
             </Button>
           </DialogFooter>
         </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function AddCertificationDialog({
+  open,
+  token,
+  onOpenChange,
+  onSaved,
+}: {
+  open: boolean
+  token: string
+  onOpenChange: (open: boolean) => void
+  onSaved: (saved: SavedProfileResponse) => void
+}): JSX.Element {
+  const [certificateUrl, setCertificateUrl] = useState("")
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [certificateError, setCertificateError] = useState<string | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
+
+  function resetForm(): void {
+    setCertificateUrl("")
+    setSelectedFile(null)
+    setCertificateError(null)
+    setIsSaving(false)
+  }
+
+  function handleOpenChange(nextOpen: boolean): void {
+    if (!nextOpen) {
+      resetForm()
+    }
+
+    onOpenChange(nextOpen)
+  }
+
+  function validateCertificateUrl(): string | null {
+    const trimmedUrl = certificateUrl.trim()
+
+    if (trimmedUrl.length === 0) {
+      return "Sertifika bağlantısı zorunludur."
+    }
+
+    try {
+      const parsedUrl = new URL(trimmedUrl)
+
+      if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+        return "Sertifika bağlantısı http veya https ile başlamalıdır."
+      }
+    } catch {
+      return "Geçerli bir sertifika bağlantısı girin."
+    }
+
+    return null
+  }
+
+  function validateCertificateFile(file: File): string | null {
+    if (
+      !CERTIFICATE_ALLOWED_FILE_TYPES.includes(
+        file.type as (typeof CERTIFICATE_ALLOWED_FILE_TYPES)[number]
+      )
+    ) {
+      return "Yalnızca PDF, PNG veya JPG dosyaları yüklenebilir."
+    }
+
+    if (file.size > CERTIFICATE_MAX_FILE_SIZE_BYTES) {
+      return "Dosya boyutu en fazla 10MB olabilir."
+    }
+
+    return null
+  }
+
+  function handleFileSelected(file: File | null): void {
+    if (file === null) {
+      return
+    }
+
+    const validationError = validateCertificateFile(file)
+    if (validationError !== null) {
+      setSelectedFile(null)
+      setCertificateError(validationError)
+      return
+    }
+
+    setSelectedFile(file)
+    setCertificateError(null)
+  }
+
+  function handleDrop(event: DragEvent<HTMLLabelElement>): void {
+    event.preventDefault()
+    handleFileSelected(event.dataTransfer.files.item(0))
+  }
+
+  async function handleLinkSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    const validationError = validateCertificateUrl()
+    if (validationError !== null) {
+      setCertificateError(validationError)
+      return
+    }
+
+    setIsSaving(true)
+    setCertificateError(null)
+
+    try {
+      const saved = await addProfileCertification(token, {
+        url: certificateUrl.trim(),
+      })
+
+      onSaved(saved)
+      handleOpenChange(false)
+    } catch (error) {
+      setCertificateError(
+        error instanceof Error ? error.message : "Sertifika eklenemedi."
+      )
+      setIsSaving(false)
+    }
+  }
+
+  async function handleUploadSubmit() {
+    if (selectedFile === null) {
+      setCertificateError("Yüklemek için bir belge seçin.")
+      return
+    }
+
+    setIsSaving(true)
+    setCertificateError(null)
+
+    try {
+      const saved = await uploadProfileCertificationDocument(token, {
+        document: selectedFile,
+      })
+
+      onSaved(saved)
+      handleOpenChange(false)
+    } catch (error) {
+      setCertificateError(
+        error instanceof Error ? error.message : "Belge yüklenemedi."
+      )
+      setIsSaving(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="p-0 sm:max-w-xl">
+        <div className="flex flex-col gap-5 p-5">
+          <DialogHeader className="pr-8">
+            <DialogTitle>Yeni Belge Yükle</DialogTitle>
+            <DialogDescription>
+              Sertifika veya belgelerinizi bağlantı ya da dosya olarak
+              profilinize ekleyin.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleLinkSubmit}>
+            <FieldGroup>
+              <Field data-invalid={certificateError !== null}>
+                <div className="flex gap-2">
+                  <div className="relative min-w-0 flex-1">
+                    <Link className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      value={certificateUrl}
+                      onChange={(event) => {
+                        setCertificateUrl(event.target.value)
+                        setCertificateError(null)
+                      }}
+                      placeholder="Bağlantı yapıştırın (URL)"
+                      className="pl-8"
+                      aria-label="Sertifika bağlantısı"
+                      aria-invalid={certificateError !== null}
+                      disabled={isSaving}
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    className="bg-foreground text-background hover:bg-foreground/90"
+                    disabled={isSaving}
+                  >
+                    <Link data-icon="inline-start" />
+                    Ekle
+                  </Button>
+                </div>
+                <FieldDescription className="flex items-start gap-1.5 text-xs">
+                  <Info className="mt-0.5 size-3.5 shrink-0" />
+                  Sertifika veya belgelerinizin genel erişime açık bir
+                  bağlantısını ekleyebilirsiniz.
+                </FieldDescription>
+                <FieldError>{certificateError}</FieldError>
+              </Field>
+
+              <FieldSeparator />
+
+              <Field>
+                <FieldLabel
+                  htmlFor="certificate-document"
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={handleDrop}
+                  className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-background px-4 py-8 text-center transition-colors hover:bg-muted/50"
+                >
+                  <span className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                    {selectedFile ? <FileText /> : <Upload />}
+                  </span>
+                  <span className="font-medium">
+                    {selectedFile
+                      ? selectedFile.name
+                      : "Dosya seçin veya sürükleyip bırakın"}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    PDF, PNG, JPG (Maks. 10MB)
+                  </span>
+                </FieldLabel>
+                <Input
+                  id="certificate-document"
+                  type="file"
+                  accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
+                  className="sr-only"
+                  onChange={(event) =>
+                    handleFileSelected(event.target.files?.item(0) ?? null)
+                  }
+                  disabled={isSaving}
+                />
+              </Field>
+            </FieldGroup>
+          </form>
+        </div>
+
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => handleOpenChange(false)}
+            disabled={isSaving}
+          >
+            İptal
+          </Button>
+          <Button
+            type="button"
+            onClick={handleUploadSubmit}
+            disabled={isSaving || selectedFile === null}
+          >
+            <Upload data-icon="inline-start" />
+            {isSaving ? "Yükleniyor..." : "Belgeyi Yükle"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )

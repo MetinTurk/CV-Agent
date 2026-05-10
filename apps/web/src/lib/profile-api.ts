@@ -10,6 +10,14 @@ export type AddProfileProjectPayload = {
   url: string
 }
 
+export type AddProfileCertificationPayload = {
+  url: string
+}
+
+export type UploadProfileCertificationDocumentPayload = {
+  document: File
+}
+
 type ApiErrorPayload = {
   detail?: unknown
 }
@@ -102,6 +110,80 @@ export async function addProfileProject(
     }
 
     throw new Error(getErrorMessage(errorPayload, "Proje eklenemedi."))
+  }
+
+  return response.json() as Promise<SavedProfileResponse>
+}
+
+export async function addProfileCertification(
+  token: string,
+  payload: AddProfileCertificationPayload
+): Promise<SavedProfileResponse> {
+  let response: Response
+
+  try {
+    response = await fetch(`${API_BASE_URL}/profile/certifications`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    })
+  } catch {
+    throw new Error(
+      "API sunucusuna ulaşılamadı. Lütfen server'ın çalıştığını ve API adresinin doğru olduğunu kontrol edin."
+    )
+  }
+
+  if (!response.ok) {
+    let errorPayload: unknown = null
+
+    try {
+      errorPayload = await response.json()
+    } catch {
+      throw new Error("Sertifika eklenemedi.")
+    }
+
+    throw new Error(getErrorMessage(errorPayload, "Sertifika eklenemedi."))
+  }
+
+  return response.json() as Promise<SavedProfileResponse>
+}
+
+export async function uploadProfileCertificationDocument(
+  token: string,
+  payload: UploadProfileCertificationDocumentPayload
+): Promise<SavedProfileResponse> {
+  const formData = new FormData()
+  formData.set("document", payload.document)
+
+  let response: Response
+
+  try {
+    response = await fetch(`${API_BASE_URL}/profile/certifications/document`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    })
+  } catch {
+    throw new Error(
+      "API sunucusuna ulaşılamadı. Lütfen server'ın çalıştığını ve API adresinin doğru olduğunu kontrol edin."
+    )
+  }
+
+  if (!response.ok) {
+    let errorPayload: unknown = null
+
+    try {
+      errorPayload = await response.json()
+    } catch {
+      throw new Error("Belge yüklenemedi.")
+    }
+
+    throw new Error(getErrorMessage(errorPayload, "Belge yüklenemedi."))
   }
 
   return response.json() as Promise<SavedProfileResponse>
