@@ -9,4 +9,11 @@ export const SavedProfileResponseSchema = t.Object({
   updated_at: t.String(),
 })
 
+export const ProfileProjectLinkRequestSchema = t.Object({
+  url: t.String({ minLength: 1, maxLength: 2048 }),
+})
+
 export type SavedProfileResponse = Static<typeof SavedProfileResponseSchema>
+export type ProfileProjectLinkRequest = Static<
+  typeof ProfileProjectLinkRequestSchema
+>

@@ -4,15 +4,34 @@ import {
   AlertCircle,
   BookOpen,
   BriefcaseBusiness,
+  Info,
   Languages,
+  Link,
   ListChecks,
   LogOut,
   Medal,
   Pencil,
+  Plus,
+  Sparkles,
   UserRound,
 } from "lucide-react"
 
 import { Button } from "@workspace/ui/components/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@workspace/ui/components/dialog"
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@workspace/ui/components/field"
 import { Input } from "@workspace/ui/components/input"
 import { Label } from "@workspace/ui/components/label"
 import { Separator } from "@workspace/ui/components/separator"
@@ -21,6 +40,7 @@ import { AppSidebar } from "@/components/app-sidebar"
 import { ThemeToggle } from "@/components/theme-toggle"
 import type { AuthUser } from "@/lib/auth-api"
 import {
+  addProfileProject,
   getSavedProfile,
   updateProfile,
   type SavedProfileResponse,
@@ -43,6 +63,7 @@ type ProfileSectionProps = {
   title: string
   icon: typeof UserRound
   children: JSX.Element
+  action?: JSX.Element
 }
 
 type ProfileFormState = {
@@ -207,6 +228,7 @@ function ProfileContent({
   const [isEditing, setIsEditing] = useState(false)
   const [currentProfile, setCurrentProfile] = useState(initialProfile)
   const [currentUpdatedAt, setCurrentUpdatedAt] = useState(initialUpdatedAt)
+  const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false)
 
   if (isEditing) {
     return (
@@ -262,7 +284,20 @@ function ProfileContent({
           <TextValue value={currentProfile.education} />
         </ProfileSection>
 
-        <ProfileSection title="Projeler" icon={BriefcaseBusiness}>
+        <ProfileSection
+          title="Projeler"
+          icon={BriefcaseBusiness}
+          action={
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setIsProjectDialogOpen(true)}
+            >
+              <Plus data-icon="inline-start" />
+              Ekle
+            </Button>
+          }
+        >
           <BulletList values={currentProfile.projects} />
         </ProfileSection>
 
@@ -282,7 +317,155 @@ function ProfileContent({
       <ProfileSection title="Ek Bilgiler" icon={UserRound}>
         <TextValue value={currentProfile.additional_information} />
       </ProfileSection>
+
+      <AddProjectDialog
+        open={isProjectDialogOpen}
+        token={token}
+        onOpenChange={setIsProjectDialogOpen}
+        onSaved={(saved) => {
+          setCurrentProfile(saved.profile)
+          setCurrentUpdatedAt(saved.updated_at)
+        }}
+      />
     </>
+  )
+}
+
+function AddProjectDialog({
+  open,
+  token,
+  onOpenChange,
+  onSaved,
+}: {
+  open: boolean
+  token: string
+  onOpenChange: (open: boolean) => void
+  onSaved: (saved: SavedProfileResponse) => void
+}): JSX.Element {
+  const [projectUrl, setProjectUrl] = useState("")
+  const [projectError, setProjectError] = useState<string | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
+
+  function resetForm(): void {
+    setProjectUrl("")
+    setProjectError(null)
+    setIsSaving(false)
+  }
+
+  function handleOpenChange(nextOpen: boolean): void {
+    if (!nextOpen) {
+      resetForm()
+    }
+
+    onOpenChange(nextOpen)
+  }
+
+  function validateProjectUrl(): string | null {
+    const trimmedUrl = projectUrl.trim()
+
+    if (trimmedUrl.length === 0) {
+      return "Proje bağlantısı zorunludur."
+    }
+
+    try {
+      const parsedUrl = new URL(trimmedUrl)
+
+      if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+        return "Proje bağlantısı http veya https ile başlamalıdır."
+      }
+    } catch {
+      return "Geçerli bir proje bağlantısı girin."
+    }
+
+    return null
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    const validationError = validateProjectUrl()
+    if (validationError !== null) {
+      setProjectError(validationError)
+      return
+    }
+
+    setIsSaving(true)
+    setProjectError(null)
+
+    try {
+      const saved = await addProfileProject(token, {
+        url: projectUrl.trim(),
+      })
+
+      onSaved(saved)
+      handleOpenChange(false)
+    } catch (error) {
+      setProjectError(
+        error instanceof Error ? error.message : "Proje eklenemedi."
+      )
+      setIsSaving(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="p-0 sm:max-w-lg">
+        <form onSubmit={handleSubmit}>
+          <div className="flex flex-col gap-6 p-5">
+            <DialogHeader className="pr-8">
+              <DialogTitle>Yeni Proje Ekle</DialogTitle>
+              <DialogDescription className="leading-6">
+                GitHub, portfolyo veya canlı proje bağlantınızı buraya ekleyerek
+                profilinizi güçlendirin. Yapay zeka, bağlantıdaki içeriği analiz
+                ederek projenizi otomatik olarak detaylandıracaktır.
+              </DialogDescription>
+            </DialogHeader>
+
+            <FieldGroup>
+              <Field data-invalid={projectError !== null}>
+                <FieldLabel htmlFor="project-url">Proje Bağlantısı</FieldLabel>
+                <div className="relative">
+                  <Link className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="project-url"
+                    value={projectUrl}
+                    onChange={(event) => {
+                      setProjectUrl(event.target.value)
+                      setProjectError(null)
+                    }}
+                    placeholder="https://github.com/kullanici/proje"
+                    className="pl-8"
+                    aria-invalid={projectError !== null}
+                    disabled={isSaving}
+                  />
+                </div>
+                <FieldDescription className="flex items-start gap-1.5 text-xs">
+                  <Info className="mt-0.5 size-3.5 shrink-0" />
+                  Desteklenen platformlar: GitHub, GitLab, Behance ve ideal
+                  portfolyo adresleri.
+                </FieldDescription>
+                <FieldError>{projectError}</FieldError>
+              </Field>
+            </FieldGroup>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => handleOpenChange(false)}
+              disabled={isSaving}
+            >
+              İptal
+            </Button>
+            <Button type="submit" disabled={isSaving}>
+              <Sparkles data-icon="inline-start" />
+              {isSaving ? "Ekleniyor..." : "Ekle ve Analiz Et"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -460,7 +643,7 @@ function FormTextArea({
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
       rows={4}
-      className="w-full resize-y rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+      className="w-full resize-y rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
     />
   )
 }
@@ -469,12 +652,16 @@ function ProfileSection({
   title,
   icon: Icon,
   children,
+  action,
 }: ProfileSectionProps): JSX.Element {
   return (
     <section className="rounded-lg border border-border bg-card p-4">
-      <div className="flex items-center gap-2">
-        <Icon className="size-4 text-muted-foreground" />
-        <h3 className="font-semibold">{title}</h3>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <Icon className="size-4 shrink-0 text-muted-foreground" />
+          <h3 className="truncate font-semibold">{title}</h3>
+        </div>
+        {action ? <div className="shrink-0">{action}</div> : null}
       </div>
       <Separator className="my-3" />
       {children}
