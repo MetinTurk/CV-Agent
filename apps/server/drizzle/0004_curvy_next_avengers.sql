@@ -1,0 +1,1 @@
+ALTER TABLE "job_analyses" ADD COLUMN "application_status" text DEFAULT 'pending' NOT NULL;

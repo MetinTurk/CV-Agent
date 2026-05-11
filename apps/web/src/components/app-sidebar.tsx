@@ -1,9 +1,10 @@
 // Module: Renders the authenticated application sidebar navigation.
 import { useState, type JSX } from "react"
-import { useNavigate } from "react-router"
+import { Link, useLocation, useNavigate } from "react-router"
 import {
   BarChart3,
   Bot,
+  ClipboardList,
   GraduationCap,
   MessageCircle,
   PlusCircle,
@@ -22,7 +23,6 @@ type SidebarNavItem = {
   href: string
   label: string
   icon: LucideIcon
-  isActive?: boolean
 }
 
 type AppSidebarProps = {
@@ -31,23 +31,27 @@ type AppSidebarProps = {
 
 const sidebarNavItems: SidebarNavItem[] = [
   {
-    href: "#profilim",
+    href: "/profile",
     label: "Profilim",
     icon: UserRound,
-    isActive: true,
   },
   {
-    href: "#is-analizi",
+    href: "/applications",
+    label: "Geçmiş Başvurular",
+    icon: ClipboardList,
+  },
+  {
+    href: "/job-analysis",
     label: "İş Analizi",
     icon: BarChart3,
   },
   {
-    href: "#gelisim-merkezi",
+    href: "/profile#gelisim-merkezi",
     label: "Gelişim Merkezi",
     icon: GraduationCap,
   },
   {
-    href: "#ai-kariyer-sohbeti",
+    href: "/profile-chat",
     label: "AI Kariyer Sohbeti",
     icon: MessageCircle,
   },
@@ -55,6 +59,7 @@ const sidebarNavItems: SidebarNavItem[] = [
 
 export function AppSidebar({ token }: AppSidebarProps = {}): JSX.Element {
   const navigate = useNavigate()
+  const location = useLocation()
   const [isNewAnalysisOpen, setIsNewAnalysisOpen] = useState(false)
 
   const handleAnalysisCreated = (analysis: JobAnalysisResponse): void => {
@@ -73,24 +78,28 @@ export function AppSidebar({ token }: AppSidebarProps = {}): JSX.Element {
           <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
             <Bot />
           </div>
-          <a
-            href="#profilim"
-            className="min-w-0"
-          >
+          <Link to="/profile" className="min-w-0">
             <span className="block truncate text-base font-semibold tracking-normal">
               Kariyer Asistanı
             </span>
             <span className="block truncate text-xs text-muted-foreground">
               Yapay Zeka Destekli
             </span>
-          </a>
+          </Link>
         </div>
 
         <Separator />
 
-        <nav className="flex flex-1 flex-col gap-1 px-3 py-4" aria-label="Sayfa bölümleri">
+        <nav
+          className="flex flex-1 flex-col gap-1 px-3 py-4"
+          aria-label="Sayfa bölümleri"
+        >
           {sidebarNavItems.map((item) => {
             const Icon = item.icon
+            const isActive =
+              location.pathname === item.href ||
+              (item.href.includes("#") &&
+                `${location.pathname}${location.hash}` === item.href)
 
             return (
               <Button
@@ -100,14 +109,14 @@ export function AppSidebar({ token }: AppSidebarProps = {}): JSX.Element {
                 size="lg"
                 className={cn(
                   "relative w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                  item.isActive &&
-                    "bg-sidebar-accent text-sidebar-primary after:absolute after:right-1.5 after:top-1/2 after:h-5 after:w-1 after:-translate-y-1/2 after:rounded-full after:bg-sidebar-primary"
+                  isActive &&
+                    "bg-sidebar-accent text-sidebar-primary after:absolute after:top-1/2 after:right-1.5 after:h-5 after:w-1 after:-translate-y-1/2 after:rounded-full after:bg-sidebar-primary"
                 )}
               >
-                <a href={item.href} title={item.label}>
+                <Link to={item.href} title={item.label}>
                   <Icon data-icon="inline-start" />
                   <span className="truncate">{item.label}</span>
-                </a>
+                </Link>
               </Button>
             )
           })}
