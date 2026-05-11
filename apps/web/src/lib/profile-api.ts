@@ -6,6 +6,20 @@ export type SavedProfileResponse = {
   updated_at: string
 }
 
+export class SavedProfileNotFoundError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = "SavedProfileNotFoundError"
+  }
+}
+
+export class SavedProfileUnauthorizedError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = "SavedProfileUnauthorizedError"
+  }
+}
+
 type ApiErrorPayload = {
   detail?: unknown
 }
@@ -61,7 +75,17 @@ export async function updateProfile(
       throw new Error("Profil güncellenemedi.")
     }
 
-    throw new Error(getErrorMessage(errorPayload))
+    const message = getErrorMessage(errorPayload)
+
+    if (response.status === 404) {
+      throw new SavedProfileNotFoundError(message)
+    }
+
+    if (response.status === 401) {
+      throw new SavedProfileUnauthorizedError(message)
+    }
+
+    throw new Error(message)
   }
 
   return response.json() as Promise<SavedProfileResponse>
@@ -93,7 +117,17 @@ export async function getSavedProfile(
       throw new Error("Profil bilgisi alınamadı.")
     }
 
-    throw new Error(getErrorMessage(errorPayload))
+    const message = getErrorMessage(errorPayload)
+
+    if (response.status === 404) {
+      throw new SavedProfileNotFoundError(message)
+    }
+
+    if (response.status === 401) {
+      throw new SavedProfileUnauthorizedError(message)
+    }
+
+    throw new Error(message)
   }
 
   return response.json() as Promise<SavedProfileResponse>

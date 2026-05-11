@@ -9,6 +9,7 @@ import { ProfileDashboardPage } from "@/components/profile-dashboard/profile-das
 import { ExtensionInstallPrompt } from "@/components/extension-install/extension-install-prompt"
 import { ProfilePage } from "@/components/profile/profile-page"
 import { ProfileChatPage } from "@/components/profile-chat/profile-chat-page"
+import { Button } from "@workspace/ui/components/button"
 import {
   getCurrentUser,
   type AuthResponse,
@@ -21,6 +22,11 @@ import {
   saveAccessToken,
   type TokenPersistence,
 } from "@/lib/auth-token"
+import {
+  getSavedProfile,
+  SavedProfileNotFoundError,
+  SavedProfileUnauthorizedError,
+} from "@/lib/profile-api"
 
 type AuthState =
   | { status: "checking" }
@@ -28,6 +34,12 @@ type AuthState =
   | { status: "authenticated"; user: AuthUser }
 
 type ExtensionStatus = "checking" | "installed" | "missing"
+
+type SavedProfileStatus =
+  | { status: "checking" }
+  | { status: "missing" }
+  | { status: "available" }
+  | { status: "error"; message: string }
 
 const CHROME_EXTENSION_STORE_URL = "https://chromewebstore.google.com/"
 const AUTH_ROUTE = "/auth"
@@ -45,8 +57,11 @@ export function App(): JSX.Element {
   )
   const [extensionStatus, setExtensionStatus] =
     useState<ExtensionStatus>("checking")
+  const [savedProfileStatus, setSavedProfileStatus] =
+    useState<SavedProfileStatus>({ status: "checking" })
   const [isExtensionPromptDismissed, setIsExtensionPromptDismissed] =
     useState(false)
+  const [profileCheckAttempt, setProfileCheckAttempt] = useState(0)
 
   const authenticatedUserId =
     authState.status === "authenticated" ? authState.user.id : null
@@ -79,6 +94,54 @@ export function App(): JSX.Element {
   useEffect(() => {
     let isActive = true
 
+    if (authenticatedUserId === null || accessToken === null) {
+      setSavedProfileStatus({ status: "checking" })
+      return undefined
+    }
+
+    setSavedProfileStatus({ status: "checking" })
+
+    getSavedProfile(accessToken)
+      .then(() => {
+        if (isActive) {
+          setSavedProfileStatus({ status: "available" })
+        }
+      })
+      .catch((error: unknown) => {
+        if (!isActive) {
+          return
+        }
+
+        if (error instanceof SavedProfileNotFoundError) {
+          setSavedProfileStatus({ status: "missing" })
+          return
+        }
+
+        if (error instanceof SavedProfileUnauthorizedError) {
+          clearAccessToken()
+          setAccessToken(null)
+          setAuthState({ status: "guest" })
+          setSavedProfileStatus({ status: "checking" })
+          return
+        }
+
+        setSavedProfileStatus({
+          status: "error",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Profil durumu kontrol edilemedi.",
+        })
+      })
+
+    return () => {
+      isActive = false
+    }
+  }, [authenticatedUserId, accessToken, profileCheckAttempt])
+
+  useEffect(() => {
+    let isActive = true
+
     if (authenticatedUserId === null) {
       return undefined
     }
@@ -101,6 +164,7 @@ export function App(): JSX.Element {
     saveAccessToken(response.access_token, persistence)
     setAccessToken(response.access_token)
     setExtensionStatus("checking")
+    setSavedProfileStatus({ status: "checking" })
     setIsExtensionPromptDismissed(false)
     setAuthState({ status: "authenticated", user: response.user })
   }
@@ -109,6 +173,7 @@ export function App(): JSX.Element {
     clearAccessToken()
     setAccessToken(null)
     setExtensionStatus("checking")
+    setSavedProfileStatus({ status: "checking" })
     setIsExtensionPromptDismissed(false)
     setAuthState({ status: "guest" })
   }
@@ -118,6 +183,7 @@ export function App(): JSX.Element {
   }
 
   const handleProfileCompleted = (redirectTo: string): void => {
+    setSavedProfileStatus({ status: "available" })
     navigate(redirectTo, { replace: true })
   }
 
@@ -148,6 +214,47 @@ export function App(): JSX.Element {
     )
   }
 
+  if (savedProfileStatus.status === "checking") {
+    return (
+      <main className="flex min-h-svh items-center justify-center bg-muted/30 p-6">
+        <div className="rounded-lg border border-border bg-card px-5 py-4 text-sm text-muted-foreground">
+          Profil bilgileri kontrol ediliyor...
+        </div>
+      </main>
+    )
+  }
+
+  if (savedProfileStatus.status === "error") {
+    return (
+      <main className="flex min-h-svh items-center justify-center bg-muted/30 p-6">
+        <div className="flex max-w-md flex-col gap-4 rounded-lg border border-border bg-card px-5 py-4 text-sm text-card-foreground">
+          <div>
+            <h1 className="font-semibold">Profil durumu kontrol edilemedi</h1>
+            <p className="mt-1 text-muted-foreground">
+              {savedProfileStatus.message}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              onClick={() => setProfileCheckAttempt((attempt) => attempt + 1)}
+            >
+              Tekrar Dene
+            </Button>
+            <Button type="button" variant="outline" onClick={handleLogout}>
+              Çıkış Yap
+            </Button>
+          </div>
+        </div>
+      </main>
+    )
+  }
+
+  const authenticatedHomeRoute =
+    savedProfileStatus.status === "available"
+      ? PROFILE_ROUTE
+      : PROFILE_CHAT_ROUTE
+
   const profileChatPage = (
     <>
       <ProfileChatPage
@@ -167,10 +274,13 @@ export function App(): JSX.Element {
 
   return (
     <Routes>
-      <Route path="/" element={<Navigate to={PROFILE_CHAT_ROUTE} replace />} />
+      <Route
+        path="/"
+        element={<Navigate to={authenticatedHomeRoute} replace />}
+      />
       <Route
         path={AUTH_ROUTE}
-        element={<Navigate to={PROFILE_CHAT_ROUTE} replace />}
+        element={<Navigate to={authenticatedHomeRoute} replace />}
       />
       <Route path={PROFILE_CHAT_ROUTE} element={profileChatPage} />
       <Route path={JOB_ANALYSIS_ROUTE} element={<JobAnalysisPage />} />
@@ -186,7 +296,10 @@ export function App(): JSX.Element {
           />
         }
       />
-      <Route path="*" element={<Navigate to={PROFILE_CHAT_ROUTE} replace />} />
+      <Route
+        path="*"
+        element={<Navigate to={authenticatedHomeRoute} replace />}
+      />
     </Routes>
   )
 }
