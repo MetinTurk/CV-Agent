@@ -4,7 +4,7 @@ import {
   AlertCircle,
   BookOpen,
   BriefcaseBusiness,
-  Github,
+  GitBranch,
   Info,
   Languages,
   Link,
@@ -270,7 +270,7 @@ function ProfileContent({
                 rel="noopener noreferrer"
                 className="mt-2 inline-flex items-center gap-1.5 text-sm text-primary underline-offset-4 hover:underline"
               >
-                <Github className="size-4" />
+                <GitBranch className="size-4" />
                 {currentProfile.github_url}
               </a>
             ) : null}
@@ -312,7 +312,7 @@ function ProfileContent({
                 size="sm"
                 onClick={() => setIsGithubDialogOpen(true)}
               >
-                <Github data-icon="inline-start" />
+                <GitBranch data-icon="inline-start" />
                 GitHub'dan Aktar
               </Button>
               <Button
@@ -608,7 +608,7 @@ function GithubImportDialog({
                   GitHub Profil Bağlantısı
                 </FieldLabel>
                 <div className="relative">
-                  <Github className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <GitBranch className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     id="github-url"
                     value={githubUrl}
@@ -642,7 +642,7 @@ function GithubImportDialog({
               İptal
             </Button>
             <Button type="submit" disabled={isImporting}>
-              <Github data-icon="inline-start" />
+              <GitBranch data-icon="inline-start" />
               {isImporting ? "Aktarılıyor..." : "Projeleri Aktar"}
             </Button>
           </DialogFooter>
@@ -716,7 +716,7 @@ function ProfileEditForm({
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="github_url">GitHub Profil Bağlantısı</Label>
               <div className="relative">
-                <Github className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+                <GitBranch className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   id="github_url"
                   value={form.github_url}

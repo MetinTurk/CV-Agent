@@ -12,7 +12,6 @@ import {
   LinkIcon,
   LogOut,
   MessageSquareText,
-  Send,
   SendHorizonal,
   UserRound,
 } from "lucide-react"
