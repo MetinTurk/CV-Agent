@@ -2,6 +2,7 @@
 import type { Settings } from "../core/config"
 import { ProfileRepository } from "../db/repositories/profiles"
 import type { UserRecord } from "../db/schema"
+import { GitHubProjectService } from "./github-project-service"
 import {
   REQUIRED_PROFILE_FIELDS,
   type ProfileChatRequest,
@@ -32,11 +33,19 @@ type ProfileStore = {
   upsertForUser(userId: string, profileData: ProfileData): Promise<unknown>
 }
 
+type GitHubProjectImporter = {
+  importProfileProjects(githubUrl: string): Promise<{
+    canonicalProfileUrl: string
+    projects: string[]
+  }>
+}
+
 const EMPTY_PROFILE: ProfileData = {
   full_name: null,
   location: null,
   skills: [],
   projects: [],
+  github_url: null,
   certifications: [],
   languages: [],
   work_experiences: [],
@@ -52,7 +61,8 @@ export class ProfileChatService {
     private readonly profileAgent: ProfileAgent = new ProfileAgentClient(
       settings
     ),
-    private readonly profileStore: ProfileStore = new ProfileRepository()
+    private readonly profileStore: ProfileStore = new ProfileRepository(),
+    private readonly githubProjectImporter: GitHubProjectImporter = new GitHubProjectService()
   ) {}
 
   async chat(
@@ -96,7 +106,8 @@ export class ProfileChatService {
     const allOptionalCovered = OPTIONAL_PROFILE_FIELDS.every((f) =>
       conversation.coveredOptionalFields.has(f)
     )
-    const isProfileReady = missingRequiredFields.length === 0 && allOptionalCovered
+    const isProfileReady =
+      missingRequiredFields.length === 0 && allOptionalCovered
 
     conversation.messages = [
       ...conversation.messages,
@@ -108,6 +119,10 @@ export class ProfileChatService {
     ]
 
     if (isProfileReady) {
+      conversation.profile = await withGitHubProjects(
+        conversation.profile,
+        this.githubProjectImporter
+      )
       await this.profileStore.upsertForUser(user.id, conversation.profile)
     }
 
@@ -139,6 +154,7 @@ export class ProfileChatService {
         ...EMPTY_PROFILE,
         skills: [],
         projects: [],
+        github_url: null,
         certifications: [],
         languages: [],
         work_experiences: [],
@@ -210,6 +226,7 @@ function mergeProfile(profile: ProfileData, patch: ProfilePatch): ProfileData {
     location: cleanText(patch.location) ?? profile.location,
     skills: mergeList(profile.skills, patch.skills),
     projects: mergeList(profile.projects, patch.projects),
+    github_url: cleanText(patch.github_url) ?? profile.github_url,
     certifications: mergeList(profile.certifications, patch.certifications),
     languages: mergeList(profile.languages, patch.languages),
     work_experiences: mergeList(
@@ -219,6 +236,33 @@ function mergeProfile(profile: ProfileData, patch: ProfilePatch): ProfileData {
     education: cleanText(patch.education) ?? profile.education,
     additional_information:
       cleanText(patch.additional_information) ?? profile.additional_information,
+  }
+}
+
+async function withGitHubProjects(
+  profile: ProfileData,
+  githubProjectImporter: GitHubProjectImporter
+): Promise<ProfileData> {
+  if (profile.github_url === null) {
+    return profile
+  }
+
+  try {
+    const result = await githubProjectImporter.importProfileProjects(
+      profile.github_url
+    )
+
+    return {
+      ...profile,
+      github_url: result.canonicalProfileUrl,
+      projects: mergeList(profile.projects, result.projects),
+    }
+  } catch (error) {
+    console.error(
+      "[profile-chat] GitHub projeleri alınamadı:",
+      error instanceof Error ? error.message : error
+    )
+    return profile
   }
 }
 

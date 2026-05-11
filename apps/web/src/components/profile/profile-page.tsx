@@ -4,6 +4,7 @@ import {
   AlertCircle,
   BookOpen,
   BriefcaseBusiness,
+  GitBranch,
   Info,
   Languages,
   Link,
@@ -42,6 +43,7 @@ import type { AuthUser } from "@/lib/auth-api"
 import {
   addProfileProject,
   getSavedProfile,
+  importGithubProjects,
   updateProfile,
   type SavedProfileResponse,
 } from "@/lib/profile-api"
@@ -71,6 +73,7 @@ type ProfileFormState = {
   location: string
   skills: string
   projects: string
+  github_url: string
   certifications: string
   languages: string
   work_experiences: string
@@ -86,6 +89,7 @@ function profileToForm(profile: ProfileData): ProfileFormState {
     location: profile.location ?? "",
     skills: profile.skills.join("\n"),
     projects: profile.projects.join("\n"),
+    github_url: profile.github_url ?? "",
     certifications: profile.certifications.join("\n"),
     languages: profile.languages.join("\n"),
     work_experiences: profile.work_experiences.join("\n"),
@@ -106,6 +110,7 @@ function formToProfile(form: ProfileFormState): ProfileData {
     location: form.location.trim() || null,
     skills: splitLines(form.skills),
     projects: splitLines(form.projects),
+    github_url: form.github_url.trim() || null,
     certifications: splitLines(form.certifications),
     languages: splitLines(form.languages),
     work_experiences: splitLines(form.work_experiences),
@@ -229,6 +234,7 @@ function ProfileContent({
   const [currentProfile, setCurrentProfile] = useState(initialProfile)
   const [currentUpdatedAt, setCurrentUpdatedAt] = useState(initialUpdatedAt)
   const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false)
+  const [isGithubDialogOpen, setIsGithubDialogOpen] = useState(false)
 
   if (isEditing) {
     return (
@@ -257,6 +263,17 @@ function ProfileContent({
             <p className="mt-1 text-sm text-muted-foreground">
               {currentProfile.location ?? emptyText}
             </p>
+            {currentProfile.github_url !== null ? (
+              <a
+                href={currentProfile.github_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-flex items-center gap-1.5 text-sm text-primary underline-offset-4 hover:underline"
+              >
+                <GitBranch className="size-4" />
+                {currentProfile.github_url}
+              </a>
+            ) : null}
           </div>
 
           <div className="flex shrink-0 flex-col gap-2 md:items-end">
@@ -288,17 +305,28 @@ function ProfileContent({
           title="Projeler"
           icon={BriefcaseBusiness}
           action={
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => setIsProjectDialogOpen(true)}
-            >
-              <Plus data-icon="inline-start" />
-              Ekle
-            </Button>
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsGithubDialogOpen(true)}
+              >
+                <GitBranch data-icon="inline-start" />
+                GitHub'dan Aktar
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setIsProjectDialogOpen(true)}
+              >
+                <Plus data-icon="inline-start" />
+                Ekle
+              </Button>
+            </div>
           }
         >
-          <BulletList values={currentProfile.projects} />
+          <ProjectList values={currentProfile.projects} />
         </ProfileSection>
 
         <ProfileSection title="İş Deneyimleri" icon={BriefcaseBusiness}>
@@ -322,6 +350,17 @@ function ProfileContent({
         open={isProjectDialogOpen}
         token={token}
         onOpenChange={setIsProjectDialogOpen}
+        onSaved={(saved) => {
+          setCurrentProfile(saved.profile)
+          setCurrentUpdatedAt(saved.updated_at)
+        }}
+      />
+
+      <GithubImportDialog
+        open={isGithubDialogOpen}
+        token={token}
+        initialUrl={currentProfile.github_url}
+        onOpenChange={setIsGithubDialogOpen}
         onSaved={(saved) => {
           setCurrentProfile(saved.profile)
           setCurrentUpdatedAt(saved.updated_at)
@@ -469,6 +508,150 @@ function AddProjectDialog({
   )
 }
 
+function GithubImportDialog({
+  open,
+  token,
+  initialUrl,
+  onOpenChange,
+  onSaved,
+}: {
+  open: boolean
+  token: string
+  initialUrl: string | null
+  onOpenChange: (open: boolean) => void
+  onSaved: (saved: SavedProfileResponse) => void
+}): JSX.Element {
+  const [githubUrl, setGithubUrl] = useState(initialUrl ?? "")
+  const [githubError, setGithubError] = useState<string | null>(null)
+  const [isImporting, setIsImporting] = useState(false)
+
+  function resetForm(): void {
+    setGithubUrl(initialUrl ?? "")
+    setGithubError(null)
+    setIsImporting(false)
+  }
+
+  function handleOpenChange(nextOpen: boolean): void {
+    if (!nextOpen) {
+      resetForm()
+    }
+
+    onOpenChange(nextOpen)
+  }
+
+  function validateGithubUrl(): string | null {
+    const trimmedUrl = githubUrl.trim()
+
+    if (trimmedUrl.length === 0) {
+      return "GitHub profil bağlantısı zorunludur."
+    }
+
+    try {
+      const parsedUrl = new URL(trimmedUrl)
+      if (
+        !["http:", "https:"].includes(parsedUrl.protocol) ||
+        parsedUrl.hostname !== "github.com"
+      ) {
+        return "GitHub bağlantısı https://github.com/kullanici formatında olmalıdır."
+      }
+    } catch {
+      return "Geçerli bir GitHub profil bağlantısı girin."
+    }
+
+    return null
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    const validationError = validateGithubUrl()
+    if (validationError !== null) {
+      setGithubError(validationError)
+      return
+    }
+
+    setIsImporting(true)
+    setGithubError(null)
+
+    try {
+      const saved = await importGithubProjects(token, {
+        url: githubUrl.trim(),
+      })
+
+      onSaved(saved)
+      handleOpenChange(false)
+    } catch (error) {
+      setGithubError(
+        error instanceof Error ? error.message : "GitHub projeleri alınamadı."
+      )
+      setIsImporting(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="p-0 sm:max-w-lg">
+        <form onSubmit={handleSubmit}>
+          <div className="flex flex-col gap-6 p-5">
+            <DialogHeader className="pr-8">
+              <DialogTitle>GitHub Projelerini Aktar</DialogTitle>
+              <DialogDescription className="leading-6">
+                Public GitHub repolarınız profilinizdeki projeler listesine
+                eklenir. Bu alan isteğe bağlıdır; GitHub kullanmıyorsanız boş
+                bırakabilirsiniz.
+              </DialogDescription>
+            </DialogHeader>
+
+            <FieldGroup>
+              <Field data-invalid={githubError !== null}>
+                <FieldLabel htmlFor="github-url">
+                  GitHub Profil Bağlantısı
+                </FieldLabel>
+                <div className="relative">
+                  <GitBranch className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="github-url"
+                    value={githubUrl}
+                    onChange={(event) => {
+                      setGithubUrl(event.target.value)
+                      setGithubError(null)
+                    }}
+                    placeholder="https://github.com/kullanici"
+                    className="pl-8"
+                    aria-invalid={githubError !== null}
+                    disabled={isImporting}
+                  />
+                </div>
+                <FieldDescription className="flex items-start gap-1.5 text-xs">
+                  <Info className="mt-0.5 size-3.5 shrink-0" />
+                  Sadece public repo bilgileri alınır; private repolar için
+                  GitHub hesabı bağlama yapılmaz.
+                </FieldDescription>
+                <FieldError>{githubError}</FieldError>
+              </Field>
+            </FieldGroup>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => handleOpenChange(false)}
+              disabled={isImporting}
+            >
+              İptal
+            </Button>
+            <Button type="submit" disabled={isImporting}>
+              <GitBranch data-icon="inline-start" />
+              {isImporting ? "Aktarılıyor..." : "Projeleri Aktar"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 function ProfileEditForm({
   profile,
   token,
@@ -529,6 +712,19 @@ function ProfileEditForm({
                 onChange={(e) => handleChange("location", e.target.value)}
                 placeholder="Konum"
               />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="github_url">GitHub Profil Bağlantısı</Label>
+              <div className="relative">
+                <GitBranch className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="github_url"
+                  value={form.github_url}
+                  onChange={(e) => handleChange("github_url", e.target.value)}
+                  placeholder="https://github.com/kullanici"
+                  className="pl-8"
+                />
+              </div>
             </div>
           </div>
 
@@ -708,6 +904,51 @@ function BulletList({ values }: { values: string[] }): JSX.Element {
       ))}
     </ul>
   )
+}
+
+function ProjectList({ values }: { values: string[] }): JSX.Element {
+  if (values.length === 0) {
+    return <p className="text-sm text-muted-foreground">{emptyText}</p>
+  }
+
+  return (
+    <ul className="flex flex-col gap-2 text-sm leading-6">
+      {values.map((value) => {
+        const projectUrl = extractTrailingUrl(value)
+        const label =
+          projectUrl === null
+            ? value
+            : value.replace(`(${projectUrl})`, "").trim()
+
+        return (
+          <li
+            key={value}
+            className="rounded-lg border border-border bg-background p-3"
+          >
+            <p className="font-medium">
+              {label.length > 0 ? label : projectUrl}
+            </p>
+            {projectUrl !== null ? (
+              <a
+                href={projectUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1 inline-flex max-w-full items-center gap-1.5 text-xs text-primary underline-offset-4 hover:underline"
+              >
+                <Link className="size-3.5 shrink-0" />
+                <span className="truncate">{projectUrl}</span>
+              </a>
+            ) : null}
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
+function extractTrailingUrl(value: string): string | null {
+  const match = value.match(/\((https?:\/\/[^)\s]+)\)\s*$/u)
+  return match?.[1] ?? null
 }
 
 function formatDate(value: string): string {

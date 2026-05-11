@@ -179,3 +179,64 @@ test("profile chat saves profile and returns redirect when required fields are c
     },
   ])
 })
+
+test("profile chat imports GitHub projects when an optional GitHub URL is saved", async () => {
+  const savedProfiles: Array<{ userId: string; profileData: unknown }> = []
+  const service = new ProfileChatService(
+    testSettings,
+    {
+      async generateResponse() {
+        return {
+          reply: "Profilin hazır. GitHub projelerini de ekledim.",
+          profilePatch: {
+            full_name: "Ayşe Yılmaz",
+            location: "İstanbul",
+            skills: ["React", "TypeScript"],
+            education: "Boğaziçi Üniversitesi Bilgisayar Mühendisliği",
+            github_url: "https://github.com/ayse",
+          },
+          askedAbout: [
+            "work_experiences",
+            "projects",
+            "certifications",
+            "languages",
+            "additional_information",
+          ],
+        }
+      },
+    },
+    {
+      async upsertForUser(userId, profileData) {
+        savedProfiles.push({ userId, profileData })
+      },
+    },
+    {
+      async importProfileProjects() {
+        return {
+          canonicalProfileUrl: "https://github.com/ayse",
+          projects: [
+            "cv-agent [TypeScript] - CV üretim platformu (https://github.com/ayse/cv-agent)",
+          ],
+        }
+      },
+    }
+  )
+
+  const response = await service.chat(testUser, {
+    message:
+      "Adım Ayşe Yılmaz. İstanbul'dayım. React ve TypeScript biliyorum. GitHub profilim https://github.com/ayse",
+    session_id: "first-login-profile-github",
+  })
+
+  expect(response.is_profile_ready).toBe(true)
+  expect(response.profile.github_url).toBe("https://github.com/ayse")
+  expect(response.profile.projects).toEqual([
+    "cv-agent [TypeScript] - CV üretim platformu (https://github.com/ayse/cv-agent)",
+  ])
+  expect(savedProfiles).toEqual([
+    {
+      userId: testUser.id,
+      profileData: response.profile,
+    },
+  ])
+})

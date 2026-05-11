@@ -5,6 +5,8 @@ import { ProfileRepository } from "../db/repositories/profiles"
 import { ErrorResponseSchema } from "../schemas/error"
 import { ProfileDataSchema } from "../schemas/profile-chat"
 import {
+  ProfileGithubImportRequestSchema,
+  ProfileGithubImportResponseSchema,
   ProfileProjectLinkRequestSchema,
   SavedProfileResponseSchema,
 } from "../schemas/profile"
@@ -13,10 +15,16 @@ import {
   AuthService,
   InvalidTokenError,
 } from "../services/auth-service"
+import {
+  GitHubProfileUrlError,
+  GitHubProjectFetchError,
+  GitHubProjectService,
+} from "../services/github-project-service"
 
 export function createProfileRoutes(
   authService: AuthService,
-  profileRepository: ProfileRepository = new ProfileRepository()
+  profileRepository: ProfileRepository = new ProfileRepository(),
+  githubProjectService: GitHubProjectService = new GitHubProjectService()
 ) {
   return new Elysia({
     name: "profile-routes",
@@ -110,6 +118,71 @@ export function createProfileRoutes(
         response: {
           200: SavedProfileResponseSchema,
           401: ErrorResponseSchema,
+          500: ErrorResponseSchema,
+        },
+      }
+    )
+    .post(
+      "/github/import",
+      async ({ headers, body, status }) => {
+        try {
+          const currentUser = await authService.authenticateAuthorizationHeader(
+            headers.authorization
+          )
+          const githubImport = await githubProjectService.importProfileProjects(
+            body.url
+          )
+          const profile = await profileRepository.mergeGithubProjects(
+            currentUser.id,
+            githubImport.canonicalProfileUrl,
+            githubImport.projects
+          )
+
+          return {
+            profile: profile.data,
+            updated_at: profile.updatedAt.toISOString(),
+            imported_projects: githubImport.projects,
+          }
+        } catch (error) {
+          if (
+            error instanceof AuthenticationRequiredError ||
+            error instanceof InvalidTokenError
+          ) {
+            return status(401, {
+              detail: "Invalid or expired token",
+            })
+          }
+
+          if (error instanceof GitHubProfileUrlError) {
+            return status(400, {
+              detail: error.message,
+            })
+          }
+
+          if (error instanceof GitHubProjectFetchError) {
+            return status(502, {
+              detail: error.message,
+            })
+          }
+
+          console.error(
+            "GitHub proje aktarma endpoint'inde beklenmeyen hata",
+            error
+          )
+
+          return status(500, {
+            detail:
+              "Beklenmeyen bir sunucu hatası oluştu. Lütfen tekrar deneyin.",
+          })
+        }
+      },
+      {
+        body: ProfileGithubImportRequestSchema,
+        response: {
+          200: ProfileGithubImportResponseSchema,
+          400: ErrorResponseSchema,
+          401: ErrorResponseSchema,
+          502: ErrorResponseSchema,
           500: ErrorResponseSchema,
         },
       }
