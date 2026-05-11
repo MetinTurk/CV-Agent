@@ -33,12 +33,18 @@ type JobAnalysisLocationState = {
   token?: string
 }
 
-export function JobAnalysisPage(): JSX.Element {
+type JobAnalysisPageProps = {
+  fallbackToken?: string
+}
+
+export function JobAnalysisPage({
+  fallbackToken,
+}: JobAnalysisPageProps = {}): JSX.Element {
   const navigate = useNavigate()
   const location = useLocation()
   const state = (location.state ?? null) as JobAnalysisLocationState | null
   const analysis = state?.analysis ?? null
-  const token = state?.token
+  const token = state?.token ?? fallbackToken
   const [isGeneratingCv, setIsGeneratingCv] = useState(false)
   const [generationError, setGenerationError] = useState<string | null>(null)
 
@@ -81,8 +87,9 @@ export function JobAnalysisPage(): JSX.Element {
             </CardHeader>
             <CardContent className="gap-4">
               <p className="text-sm text-muted-foreground">
-                Analiz sonucunu görmek için kenar çubuğundan "Yeni Analiz Başlat"
-                seçeneğini kullanarak bir iş ilanı bağlantısı analiz edin.
+                Analiz sonucunu görmek için kenar çubuğundan "Yeni Analiz
+                Başlat" seçeneğini kullanarak bir iş ilanı bağlantısı analiz
+                edin.
               </p>
               <Button
                 type="button"
@@ -128,7 +135,10 @@ export function JobAnalysisPage(): JSX.Element {
                   disabled={isGeneratingCv || token === undefined}
                 >
                   {isGeneratingCv ? (
-                    <Loader2 data-icon="inline-start" className="animate-spin" />
+                    <Loader2
+                      data-icon="inline-start"
+                      className="animate-spin"
+                    />
                   ) : (
                     <FileText data-icon="inline-start" />
                   )}
@@ -190,15 +200,15 @@ export function JobAnalysisPage(): JSX.Element {
           </Card>
         ) : (
           <>
-            <CompatibilityScoreCard score={matchAnalysis.genel_uyumluluk_puani} />
+            <CompatibilityScoreCard
+              score={matchAnalysis.genel_uyumluluk_puani}
+            />
 
             <div className="grid gap-6 lg:grid-cols-2">
               <ListCard
                 title="Yeterli Yönler"
                 description="Profilinizin iş ilanıyla örtüşen güçlü tarafları."
-                icon={
-                  <CheckCircle2 className="size-5 text-emerald-500" />
-                }
+                icon={<CheckCircle2 className="size-5 text-emerald-500" />}
                 accentClassName="border-emerald-200 bg-emerald-50/60 dark:border-emerald-300/40 dark:bg-emerald-300/10"
                 items={matchAnalysis.yeterli_yonler}
                 emptyText="Profilinizden öne çıkan eşleşen bir yön bulunamadı."
@@ -338,7 +348,10 @@ function CompatibilityScoreCard({
           aria-label="Uyumluluk puanı"
         >
           <div
-            className={cn("h-full rounded-full transition-all", tone.barClassName)}
+            className={cn(
+              "h-full rounded-full transition-all",
+              tone.barClassName
+            )}
             style={{ width: `${Math.max(0, Math.min(100, score))}%` }}
           />
         </div>
@@ -410,7 +423,10 @@ function ListCard({
           <ul className="space-y-2 text-sm leading-6">
             {items.map((item, index) => (
               <li key={`${index}-${item.slice(0, 24)}`} className="flex gap-2">
-                <span aria-hidden="true" className="mt-2 size-1.5 shrink-0 rounded-full bg-foreground/60" />
+                <span
+                  aria-hidden="true"
+                  className="mt-2 size-1.5 shrink-0 rounded-full bg-foreground/60"
+                />
                 <span>{item}</span>
               </li>
             ))}

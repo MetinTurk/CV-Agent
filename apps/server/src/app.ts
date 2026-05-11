@@ -3,6 +3,7 @@ import { cors } from "@elysiajs/cors"
 import { Elysia } from "elysia"
 
 import { createAuthRoutes } from "./api/auth"
+import { createApplicationRoutes } from "./api/applications"
 import { createCvGenerationRoutes } from "./api/cv-generation"
 import { createHealthRoutes } from "./api/health"
 import { createJobAnalysisRoutes } from "./api/job-analysis"
@@ -10,6 +11,7 @@ import { createProfileRoutes } from "./api/profile"
 import { createProfileChatRoutes } from "./api/profile-chat"
 import { getCorsOrigins, type Settings } from "./core/config"
 import { ProfileRepository } from "./db/repositories/profiles"
+import { JobAnalysisRepository } from "./db/repositories/job-analyses"
 import { UserRepository } from "./db/repositories/users"
 import { AuthService } from "./services/auth-service"
 import { CvGenerationService } from "./services/cv-generation-service"
@@ -19,6 +21,7 @@ import { ProfileChatService } from "./services/profile-chat-service"
 export function createApp(settings: Settings) {
   const userRepository = new UserRepository()
   const profileRepository = new ProfileRepository()
+  const jobAnalysisRepository = new JobAnalysisRepository()
   const authService = new AuthService(userRepository, settings)
   const profileChatService = new ProfileChatService(
     settings,
@@ -80,6 +83,7 @@ export function createApp(settings: Settings) {
         .use(createHealthRoutes(settings))
         .use(createProfileRoutes(authService, profileRepository))
         .use(createProfileChatRoutes(authService, profileChatService))
+        .use(createApplicationRoutes(authService, jobAnalysisRepository))
         .use(createJobAnalysisRoutes(authService, jobAnalysisService))
         .use(createCvGenerationRoutes(authService, cvGenerationService))
     )

@@ -207,6 +207,7 @@ function createRecord(
     rawContent: input.rawContent,
     jobDescription: input.jobDescription,
     matchAnalysis: input.matchAnalysis,
+    applicationStatus: "pending",
     createdAt: new Date("2026-05-07T06:01:00.000Z"),
   }
 }
