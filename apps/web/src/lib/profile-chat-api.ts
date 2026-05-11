@@ -4,6 +4,7 @@ export type ProfileData = {
   location: string | null
   skills: string[]
   projects: string[]
+  github_url: string | null
   certifications: string[]
   languages: string[]
   work_experiences: string[]

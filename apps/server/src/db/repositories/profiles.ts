@@ -13,6 +13,7 @@ function createEmptyProfileData(): ProfileData {
     location: null,
     skills: [],
     projects: [],
+    github_url: null,
     certifications: [],
     languages: [],
     work_experiences: [],
@@ -29,23 +30,29 @@ export class ProfileRepository {
       .where(eq(profiles.userId, userId))
       .limit(1)
 
-    return profile ?? null
+    return profile === undefined
+      ? null
+      : {
+          ...profile,
+          data: normalizeProfileData(profile.data),
+        }
   }
 
   async upsertForUser(
     userId: string,
     profileData: ProfileData
   ): Promise<ProfileRecord> {
+    const normalizedProfileData = normalizeProfileData(profileData)
     const [profile] = await db
       .insert(profiles)
       .values({
         userId,
-        data: profileData,
+        data: normalizedProfileData,
       })
       .onConflictDoUpdate({
         target: profiles.userId,
         set: {
-          data: profileData,
+          data: normalizedProfileData,
           updatedAt: sql`now()`,
         },
       })
@@ -60,6 +67,21 @@ export class ProfileRepository {
 
   async appendProject(userId: string, project: string): Promise<ProfileRecord> {
     return this.appendListItem(userId, "projects", project)
+  }
+
+  async mergeGithubProjects(
+    userId: string,
+    githubUrl: string,
+    projects: string[]
+  ): Promise<ProfileRecord> {
+    const existingProfile = await this.getByUserId(userId)
+    const profileData = existingProfile?.data ?? createEmptyProfileData()
+
+    return this.upsertForUser(userId, {
+      ...profileData,
+      github_url: githubUrl,
+      projects: mergeListValues(profileData.projects, projects),
+    })
   }
 
   private async appendListItem(
@@ -86,4 +108,51 @@ export class ProfileRepository {
       [field]: [...currentValues, trimmedValue],
     })
   }
+}
+
+function normalizeProfileData(profileData: ProfileData): ProfileData {
+  return {
+    ...createEmptyProfileData(),
+    ...profileData,
+    skills: Array.isArray(profileData.skills) ? profileData.skills : [],
+    projects: Array.isArray(profileData.projects) ? profileData.projects : [],
+    github_url:
+      typeof profileData.github_url === "string"
+        ? profileData.github_url
+        : null,
+    certifications: Array.isArray(profileData.certifications)
+      ? profileData.certifications
+      : [],
+    languages: Array.isArray(profileData.languages)
+      ? profileData.languages
+      : [],
+    work_experiences: Array.isArray(profileData.work_experiences)
+      ? profileData.work_experiences
+      : [],
+  }
+}
+
+function mergeListValues(
+  currentValues: string[],
+  nextValues: string[]
+): string[] {
+  const mergedValues = [...currentValues]
+  const normalizedExisting = new Set(
+    mergedValues.map((value) => value.trim().toLocaleLowerCase("tr-TR"))
+  )
+
+  for (const value of nextValues) {
+    const trimmedValue = value.trim()
+    if (trimmedValue.length === 0) {
+      continue
+    }
+
+    const normalizedValue = trimmedValue.toLocaleLowerCase("tr-TR")
+    if (!normalizedExisting.has(normalizedValue)) {
+      mergedValues.push(trimmedValue)
+      normalizedExisting.add(normalizedValue)
+    }
+  }
+
+  return mergedValues
 }

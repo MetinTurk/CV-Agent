@@ -83,6 +83,12 @@ Zorunlular tamamlandıktan sonra, sırasıyla şunları sor (hepsini sormak zoru
 - languages: Konuştuğu diller ve seviyeleri
 - additional_information: Diğer önemli bilgiler (hobiler, referanslar vb.)
 
+## İsteğe Bağlı GitHub Bağlantısı
+- github_url: Kullanıcının GitHub profil linki (ör. https://github.com/kullanici)
+- Bu alanı sohbetin başlarında nazikçe teklif edebilirsin, ancak kesinlikle zorunlu tutma.
+- Kullanıcı GitHub kullanmıyorsa veya paylaşmak istemiyorsa bu alanı boş bırak ve sohbeti normal akışında sürdür.
+- Kullanıcı GitHub linki verirse profile_patch.github_url alanına yaz.
+
 ## Yanıt Formatı
 Yalnızca geçerli JSON döndür: {"reply": string, "profile_patch": object, "asked_about": string[]}
 
@@ -175,9 +181,7 @@ export class ProfileAgentClient {
     )
   }
 
-  private async fetchOnce(
-    request: ProfileAgentRequest
-  ): Promise<GroqResponse> {
+  private async fetchOnce(request: ProfileAgentRequest): Promise<GroqResponse> {
     const controller = new AbortController()
     const timeout = setTimeout(
       () => controller.abort(),
@@ -191,7 +195,9 @@ export class ProfileAgentClient {
           "Content-Type": "application/json",
           Authorization: `Bearer ${this.settings.groqApiKey ?? ""}`,
         },
-        body: JSON.stringify(buildGroqPayload(this.settings.agentModel, request)),
+        body: JSON.stringify(
+          buildGroqPayload(this.settings.agentModel, request)
+        ),
         signal: controller.signal,
       })
 
@@ -271,8 +277,9 @@ export function parseProfileAgentResult(text: string): ProfileAgentResult {
 
   const validOptionalFields = new Set<string>(OPTIONAL_PROFILE_FIELDS)
   const askedAbout = Array.isArray(parsedJson.asked_about)
-    ? (parsedJson.asked_about as unknown[])
-        .filter((f): f is string => typeof f === "string" && validOptionalFields.has(f))
+    ? (parsedJson.asked_about as unknown[]).filter(
+        (f): f is string => typeof f === "string" && validOptionalFields.has(f)
+      )
     : []
 
   return {
@@ -317,6 +324,7 @@ function sanitizeProfilePatch(value: Record<string, unknown>): ProfilePatch {
     "full_name",
     "location",
     "education",
+    "github_url",
     "additional_information",
   ] as const
   const allowedListFields = [

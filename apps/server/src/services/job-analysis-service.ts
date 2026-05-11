@@ -19,6 +19,7 @@ const EMPTY_PROFILE: ProfileData = {
   location: null,
   skills: [],
   projects: [],
+  github_url: null,
   certifications: [],
   languages: [],
   work_experiences: [],

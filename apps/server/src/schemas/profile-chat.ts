@@ -14,6 +14,7 @@ export const ProfileDataSchema = t.Object({
   location: t.Nullable(t.String()),
   skills: t.Array(t.String()),
   projects: t.Array(t.String()),
+  github_url: t.Nullable(t.String()),
   certifications: t.Array(t.String()),
   languages: t.Array(t.String()),
   work_experiences: t.Array(t.String()),
@@ -67,6 +68,7 @@ export type ProfilePatch = Partial<{
   location: string
   skills: string[]
   projects: string[]
+  github_url: string
   certifications: string[]
   languages: string[]
   work_experiences: string[]
