@@ -6,6 +6,7 @@ import { JobAnalysisRepository } from "../db/repositories/job-analyses"
 import { ProfileRepository } from "../db/repositories/profiles"
 import type { JobAnalysisRecord, UserRecord } from "../db/schema"
 import type {
+  ApplicationStatus,
   ExtractedJobPosting,
   JobAnalysisCreateRequest,
   JobAnalysisResponse,
@@ -97,6 +98,25 @@ export class JobAnalysisService {
     const record = await this.repository.getByIdForUser(analysisId, user.id)
     return record === null ? null : toResponse(record)
   }
+
+  async listForUser(user: UserRecord): Promise<JobAnalysisResponse[]> {
+    const records = await this.repository.listByUserId(user.id)
+    return records.map(toResponse)
+  }
+
+  async updateApplicationStatusForUser(
+    analysisId: string,
+    user: UserRecord,
+    applicationStatus: ApplicationStatus
+  ): Promise<JobAnalysisResponse | null> {
+    const record = await this.repository.updateApplicationStatusForUser(
+      analysisId,
+      user.id,
+      applicationStatus
+    )
+
+    return record === null ? null : toResponse(record)
+  }
 }
 
 function extractExtensionSourceContext(jobPosting: ExtractedJobPosting): {
@@ -119,6 +139,7 @@ function toResponse(record: JobAnalysisRecord): JobAnalysisResponse {
     url: record.url,
     job_description: record.jobDescription,
     match_analysis: record.matchAnalysis ?? null,
+    application_status: record.applicationStatus,
     created_at: record.createdAt.toISOString(),
     status: "completed",
     redirect_url: redirectUrl,

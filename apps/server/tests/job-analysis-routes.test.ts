@@ -69,6 +69,7 @@ const successfulResponse: JobAnalysisResponse = {
     genel_uyumluluk_puani: 86,
     tavsiyeler: ["Projelerde ölçülebilir etkiyi vurgula."],
   },
+  application_status: "pending",
   created_at: "2026-05-07T06:01:00.000Z",
   status: "completed",
   redirect_url: "/job-analysis/analysis-1",
@@ -182,6 +183,53 @@ test("GET /job-analyses/:id hides analyses owned by another user", async () => {
   expect(body.detail).toBe("İş analizi bulunamadı.")
 })
 
+test("GET /job-analyses lists the current user's saved analyses", async () => {
+  const app = createTestApp({
+    listForUser: async () => [successfulResponse],
+  })
+  const response = await app.handle(
+    new Request("http://localhost/job-analyses", {
+      headers: {
+        authorization: "Bearer valid-token",
+      },
+    })
+  )
+  const body = await response.json()
+
+  expect(response.status).toBe(200)
+  expect(body).toHaveLength(1)
+  expect(body[0].id).toBe("analysis-1")
+  expect(body[0].application_status).toBe("pending")
+})
+
+test("PATCH /job-analyses/:id/application-status updates a manual status", async () => {
+  let capturedStatus: unknown = null
+  const app = createTestApp({
+    updateApplicationStatusForUser: async (_analysisId, _user, status) => {
+      capturedStatus = status
+      return {
+        ...successfulResponse,
+        application_status: status,
+      }
+    },
+  })
+  const response = await app.handle(
+    new Request("http://localhost/job-analyses/analysis-1/application-status", {
+      method: "PATCH",
+      headers: {
+        "content-type": "application/json",
+        authorization: "Bearer valid-token",
+      },
+      body: JSON.stringify({ application_status: "approved" }),
+    })
+  )
+  const body = await response.json()
+
+  expect(response.status).toBe(200)
+  expect(capturedStatus).toBe("approved")
+  expect(body.application_status).toBe("approved")
+})
+
 type TestJobAnalysisService = {
   analyzeAndSave?: (
     user: UserRecord,
@@ -191,11 +239,19 @@ type TestJobAnalysisService = {
     analysisId: string,
     user: UserRecord
   ) => Promise<JobAnalysisResponse | null>
+  listForUser?: (user: UserRecord) => Promise<JobAnalysisResponse[]>
+  updateApplicationStatusForUser?: (
+    analysisId: string,
+    user: UserRecord,
+    applicationStatus: JobAnalysisResponse["application_status"]
+  ) => Promise<JobAnalysisResponse | null>
 }
 
 function createTestApp(serviceOverrides: TestJobAnalysisService = {}) {
   const authService = {
-    async authenticateAuthorizationHeader(authorizationHeader: string | undefined) {
+    async authenticateAuthorizationHeader(
+      authorizationHeader: string | undefined
+    ) {
       if (authorizationHeader !== "Bearer valid-token") {
         throw new AuthenticationRequiredError()
       }
@@ -206,10 +262,13 @@ function createTestApp(serviceOverrides: TestJobAnalysisService = {}) {
 
   const jobAnalysisService = {
     analyzeAndSave:
-      serviceOverrides.analyzeAndSave ??
-      (async () => successfulResponse),
+      serviceOverrides.analyzeAndSave ?? (async () => successfulResponse),
     getByIdForUser:
-      serviceOverrides.getByIdForUser ??
+      serviceOverrides.getByIdForUser ?? (async () => successfulResponse),
+    listForUser:
+      serviceOverrides.listForUser ?? (async () => [successfulResponse]),
+    updateApplicationStatusForUser:
+      serviceOverrides.updateApplicationStatusForUser ??
       (async () => successfulResponse),
   } as unknown as JobAnalysisService
 

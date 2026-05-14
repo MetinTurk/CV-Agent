@@ -2,10 +2,10 @@
 import { useEffect, useState, type JSX } from "react"
 import { Navigate, Route, Routes, useNavigate } from "react-router"
 
+import { ApplicationsPage } from "@/components/applications/applications-page"
 import { AuthPage } from "@/components/auth/auth-page"
 import { CvReviewPage } from "@/components/job-analysis/cv-review-page"
 import { JobAnalysisPage } from "@/components/job-analysis/job-analysis-page"
-import { ProfileDashboardPage } from "@/components/profile-dashboard/profile-dashboard-page"
 import { ExtensionInstallPrompt } from "@/components/extension-install/extension-install-prompt"
 import { ProfilePage } from "@/components/profile/profile-page"
 import { ProfileChatPage } from "@/components/profile-chat/profile-chat-page"
@@ -45,6 +45,7 @@ const CHROME_EXTENSION_STORE_URL = "https://chromewebstore.google.com/"
 const AUTH_ROUTE = "/auth"
 const PROFILE_CHAT_ROUTE = "/profile-chat"
 const PROFILE_ROUTE = "/profile"
+const APPLICATIONS_ROUTE = "/applications"
 const JOB_ANALYSIS_ROUTE = "/job-analysis"
 const CV_REVIEW_ROUTE = "/job-analysis/review"
 
@@ -283,6 +284,10 @@ export function App(): JSX.Element {
         element={<Navigate to={authenticatedHomeRoute} replace />}
       />
       <Route path={PROFILE_CHAT_ROUTE} element={profileChatPage} />
+      <Route
+        path={APPLICATIONS_ROUTE}
+        element={<ApplicationsPage token={accessToken ?? ""} />}
+      />
       <Route path={JOB_ANALYSIS_ROUTE} element={<JobAnalysisPage />} />
       <Route path={CV_REVIEW_ROUTE} element={<CvReviewPage />} />
       <Route

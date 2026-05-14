@@ -3,8 +3,10 @@ import { Elysia } from "elysia"
 
 import { ErrorResponseSchema } from "../schemas/error"
 import {
+  JobAnalysisListResponseSchema,
   JobAnalysisCreateRequestSchema,
   JobAnalysisResponseSchema,
+  JobApplicationStatusUpdateRequestSchema,
 } from "../schemas/job-analysis"
 import {
   AuthenticationRequiredError,
@@ -71,7 +73,8 @@ export function createJobAnalysisRoutes(
           console.error("İş analizi endpoint'inde beklenmeyen hata", error)
 
           return status(500, {
-            detail: "Beklenmeyen bir sunucu hatası oluştu. Lütfen tekrar deneyin.",
+            detail:
+              "Beklenmeyen bir sunucu hatası oluştu. Lütfen tekrar deneyin.",
           })
         }
       },
@@ -82,6 +85,44 @@ export function createJobAnalysisRoutes(
           400: ErrorResponseSchema,
           401: ErrorResponseSchema,
           502: ErrorResponseSchema,
+          500: ErrorResponseSchema,
+        },
+      }
+    )
+    .get(
+      "",
+      async ({ headers, status }) => {
+        try {
+          const currentUser = await authService.authenticateAuthorizationHeader(
+            headers.authorization
+          )
+
+          return await jobAnalysisService.listForUser(currentUser)
+        } catch (error) {
+          if (
+            error instanceof AuthenticationRequiredError ||
+            error instanceof InvalidTokenError
+          ) {
+            return status(401, {
+              detail: "Invalid or expired token",
+            })
+          }
+
+          console.error(
+            "Geçmiş başvurular endpoint'inde beklenmeyen hata",
+            error
+          )
+
+          return status(500, {
+            detail:
+              "Beklenmeyen bir sunucu hatası oluştu. Lütfen tekrar deneyin.",
+          })
+        }
+      },
+      {
+        response: {
+          200: JobAnalysisListResponseSchema,
+          401: ErrorResponseSchema,
           500: ErrorResponseSchema,
         },
       }
@@ -132,10 +173,14 @@ export function createJobAnalysisRoutes(
             })
           }
 
-          console.error("İş analizi detayı endpoint'inde beklenmeyen hata", error)
+          console.error(
+            "İş analizi detayı endpoint'inde beklenmeyen hata",
+            error
+          )
 
           return status(500, {
-            detail: "Beklenmeyen bir sunucu hatası oluştu. Lütfen tekrar deneyin.",
+            detail:
+              "Beklenmeyen bir sunucu hatası oluştu. Lütfen tekrar deneyin.",
           })
         }
       },
@@ -145,6 +190,55 @@ export function createJobAnalysisRoutes(
           401: ErrorResponseSchema,
           404: ErrorResponseSchema,
           502: ErrorResponseSchema,
+          500: ErrorResponseSchema,
+        },
+      }
+    )
+    .patch(
+      "/:analysisId/application-status",
+      async ({ body, headers, params, status }) => {
+        try {
+          const currentUser = await authService.authenticateAuthorizationHeader(
+            headers.authorization
+          )
+          const analysis =
+            await jobAnalysisService.updateApplicationStatusForUser(
+              params.analysisId,
+              currentUser,
+              body.application_status
+            )
+
+          if (analysis === null) {
+            return status(404, {
+              detail: "İş analizi bulunamadı.",
+            })
+          }
+
+          return analysis
+        } catch (error) {
+          if (
+            error instanceof AuthenticationRequiredError ||
+            error instanceof InvalidTokenError
+          ) {
+            return status(401, {
+              detail: "Invalid or expired token",
+            })
+          }
+
+          console.error("Başvuru durumu endpoint'inde beklenmeyen hata", error)
+
+          return status(500, {
+            detail:
+              "Beklenmeyen bir sunucu hatası oluştu. Lütfen tekrar deneyin.",
+          })
+        }
+      },
+      {
+        body: JobApplicationStatusUpdateRequestSchema,
+        response: {
+          200: JobAnalysisResponseSchema,
+          401: ErrorResponseSchema,
+          404: ErrorResponseSchema,
           500: ErrorResponseSchema,
         },
       }

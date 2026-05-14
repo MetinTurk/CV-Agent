@@ -20,6 +20,12 @@ export const MatchAnalysisSchema = t.Object({
   tavsiyeler: t.Array(t.String()),
 })
 
+export const ApplicationStatusSchema = t.Union([
+  t.Literal("pending"),
+  t.Literal("approved"),
+  t.Literal("rejected"),
+])
+
 export const JobSourceSiteSchema = t.Union([
   t.Literal("linkedin"),
   t.Literal("kariyer-net"),
@@ -88,16 +94,27 @@ export const JobAnalysisResponseSchema = t.Object({
   url: t.String(),
   job_description: JobDescriptionSchema,
   match_analysis: t.Nullable(MatchAnalysisSchema),
+  application_status: ApplicationStatusSchema,
   created_at: t.String(),
   status: t.Literal("completed"),
   redirect_url: t.String(),
 })
 
+export const JobAnalysisListResponseSchema = t.Array(JobAnalysisResponseSchema)
+
+export const JobApplicationStatusUpdateRequestSchema = t.Object({
+  application_status: ApplicationStatusSchema,
+})
+
 export type JobDescription = Static<typeof JobDescriptionSchema>
 export type MatchAnalysis = Static<typeof MatchAnalysisSchema>
+export type ApplicationStatus = Static<typeof ApplicationStatusSchema>
 export type ExtractedJobPosting = Static<typeof ExtractedJobPostingSchema>
 export type JobAnalysisSource = Static<typeof JobAnalysisSourceSchema>
 export type JobAnalysisCreateRequest = Static<
   typeof JobAnalysisCreateRequestSchema
 >
 export type JobAnalysisResponse = Static<typeof JobAnalysisResponseSchema>
+export type JobApplicationStatusUpdateRequest = Static<
+  typeof JobApplicationStatusUpdateRequestSchema
+>
