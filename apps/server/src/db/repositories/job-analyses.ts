@@ -4,6 +4,7 @@ import { and, desc, eq } from "drizzle-orm"
 import { db } from "../client"
 import { jobAnalyses, type JobAnalysisRecord } from "../schema"
 import type {
+  ApplicationStatus,
   JobDescription,
   MatchAnalysis,
 } from "../../schemas/job-analysis"
@@ -51,8 +52,26 @@ export class JobAnalysisRepository {
     const [record] = await db
       .select()
       .from(jobAnalyses)
-      .where(and(eq(jobAnalyses.id, analysisId), eq(jobAnalyses.userId, userId)))
+      .where(
+        and(eq(jobAnalyses.id, analysisId), eq(jobAnalyses.userId, userId))
+      )
       .limit(1)
+
+    return record ?? null
+  }
+
+  async updateApplicationStatusForUser(
+    analysisId: string,
+    userId: string,
+    applicationStatus: ApplicationStatus
+  ): Promise<JobAnalysisRecord | null> {
+    const [record] = await db
+      .update(jobAnalyses)
+      .set({ applicationStatus })
+      .where(
+        and(eq(jobAnalyses.id, analysisId), eq(jobAnalyses.userId, userId))
+      )
+      .returning()
 
     return record ?? null
   }

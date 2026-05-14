@@ -18,11 +18,14 @@ export type MatchAnalysis = {
   tavsiyeler: string[]
 }
 
+export type ApplicationStatus = "pending" | "approved" | "rejected"
+
 export type JobAnalysisResponse = {
   id: string
   url: string
   job_description: JobDescription
   match_analysis: MatchAnalysis | null
+  application_status: ApplicationStatus
   created_at: string
 }
 
@@ -82,6 +85,82 @@ export async function createJobAnalysis(
     }
 
     throw new Error(getErrorMessage(errorPayload, "İş ilanı analiz edilemedi."))
+  }
+
+  return response.json() as Promise<JobAnalysisResponse>
+}
+
+export async function listJobAnalyses(
+  token: string
+): Promise<JobAnalysisResponse[]> {
+  let response: Response
+
+  try {
+    response = await fetch(`${API_BASE_URL}/job-analyses`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+  } catch {
+    throw new Error(
+      "API sunucusuna ulaşılamadı. Lütfen server'ın çalıştığını ve API adresinin doğru olduğunu kontrol edin."
+    )
+  }
+
+  if (!response.ok) {
+    let errorPayload: unknown = null
+
+    try {
+      errorPayload = await response.json()
+    } catch {
+      throw new Error("Geçmiş başvurular alınamadı.")
+    }
+
+    throw new Error(
+      getErrorMessage(errorPayload, "Geçmiş başvurular alınamadı.")
+    )
+  }
+
+  return response.json() as Promise<JobAnalysisResponse[]>
+}
+
+export async function updateApplicationStatus(
+  token: string,
+  analysisId: string,
+  applicationStatus: ApplicationStatus
+): Promise<JobAnalysisResponse> {
+  let response: Response
+
+  try {
+    response = await fetch(
+      `${API_BASE_URL}/job-analyses/${analysisId}/application-status`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ application_status: applicationStatus }),
+      }
+    )
+  } catch {
+    throw new Error(
+      "API sunucusuna ulaşılamadı. Lütfen server'ın çalıştığını ve API adresinin doğru olduğunu kontrol edin."
+    )
+  }
+
+  if (!response.ok) {
+    let errorPayload: unknown = null
+
+    try {
+      errorPayload = await response.json()
+    } catch {
+      throw new Error("Başvuru durumu güncellenemedi.")
+    }
+
+    throw new Error(
+      getErrorMessage(errorPayload, "Başvuru durumu güncellenemedi.")
+    )
   }
 
   return response.json() as Promise<JobAnalysisResponse>

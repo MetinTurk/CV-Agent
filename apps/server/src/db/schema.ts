@@ -2,6 +2,7 @@
 import { jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core"
 
 import type {
+  ApplicationStatus,
   JobDescription,
   MatchAnalysis,
 } from "../schemas/job-analysis"
@@ -40,6 +41,10 @@ export const jobAnalyses = pgTable("job_analyses", {
   rawContent: text("raw_content").notNull(),
   jobDescription: jsonb("job_description").$type<JobDescription>().notNull(),
   matchAnalysis: jsonb("match_analysis").$type<MatchAnalysis>(),
+  applicationStatus: text("application_status")
+    .$type<ApplicationStatus>()
+    .notNull()
+    .default("pending"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

@@ -12,7 +12,6 @@ import {
   LinkIcon,
   LogOut,
   MessageSquareText,
-  Send,
   SendHorizonal,
   UserRound,
 } from "lucide-react"
@@ -343,7 +342,7 @@ export function ProfileChatPage({
               />
             ) : null}
 
-            <div className="flex items-end gap-2.5 relative">
+            <div className="relative flex items-end gap-2.5">
               <textarea
                 ref={textareaRef}
                 value={inputValue}
@@ -363,7 +362,7 @@ export function ProfileChatPage({
                 size="icon-lg"
                 aria-label="Mesajı gönder"
                 disabled={isSubmitDisabled}
-                className="size-10 rounded-full absolute right-2 top-1"
+                className="absolute top-1 right-2 size-10 rounded-full"
               >
                 <SendHorizonal className="size-4.5" />
               </Button>
