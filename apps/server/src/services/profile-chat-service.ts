@@ -41,6 +41,7 @@ const EMPTY_PROFILE: ProfileData = {
   languages: [],
   work_experiences: [],
   education: null,
+  github_url: null,
   additional_information: null,
 }
 
@@ -96,7 +97,8 @@ export class ProfileChatService {
     const allOptionalCovered = OPTIONAL_PROFILE_FIELDS.every((f) =>
       conversation.coveredOptionalFields.has(f)
     )
-    const isProfileReady = missingRequiredFields.length === 0 && allOptionalCovered
+    const isProfileReady =
+      missingRequiredFields.length === 0 && allOptionalCovered
 
     conversation.messages = [
       ...conversation.messages,
@@ -217,6 +219,7 @@ function mergeProfile(profile: ProfileData, patch: ProfilePatch): ProfileData {
       patch.work_experiences
     ),
     education: cleanText(patch.education) ?? profile.education,
+    github_url: cleanText(patch.github_url) ?? profile.github_url,
     additional_information:
       cleanText(patch.additional_information) ?? profile.additional_information,
   }

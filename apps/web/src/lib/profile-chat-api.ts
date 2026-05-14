@@ -8,6 +8,7 @@ export type ProfileData = {
   languages: string[]
   work_experiences: string[]
   education: string | null
+  github_url: string | null
   additional_information: string | null
 }
 

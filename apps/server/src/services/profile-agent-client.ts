@@ -175,9 +175,7 @@ export class ProfileAgentClient {
     )
   }
 
-  private async fetchOnce(
-    request: ProfileAgentRequest
-  ): Promise<GroqResponse> {
+  private async fetchOnce(request: ProfileAgentRequest): Promise<GroqResponse> {
     const controller = new AbortController()
     const timeout = setTimeout(
       () => controller.abort(),
@@ -191,7 +189,9 @@ export class ProfileAgentClient {
           "Content-Type": "application/json",
           Authorization: `Bearer ${this.settings.groqApiKey ?? ""}`,
         },
-        body: JSON.stringify(buildGroqPayload(this.settings.agentModel, request)),
+        body: JSON.stringify(
+          buildGroqPayload(this.settings.agentModel, request)
+        ),
         signal: controller.signal,
       })
 
@@ -271,8 +271,9 @@ export function parseProfileAgentResult(text: string): ProfileAgentResult {
 
   const validOptionalFields = new Set<string>(OPTIONAL_PROFILE_FIELDS)
   const askedAbout = Array.isArray(parsedJson.asked_about)
-    ? (parsedJson.asked_about as unknown[])
-        .filter((f): f is string => typeof f === "string" && validOptionalFields.has(f))
+    ? (parsedJson.asked_about as unknown[]).filter(
+        (f): f is string => typeof f === "string" && validOptionalFields.has(f)
+      )
     : []
 
   return {
@@ -317,6 +318,7 @@ function sanitizeProfilePatch(value: Record<string, unknown>): ProfilePatch {
     "full_name",
     "location",
     "education",
+    "github_url",
     "additional_information",
   ] as const
   const allowedListFields = [
