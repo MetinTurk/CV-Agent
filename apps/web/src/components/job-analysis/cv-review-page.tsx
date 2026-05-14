@@ -3,6 +3,7 @@ import { useState, type JSX } from "react"
 import { useLocation, useNavigate } from "react-router"
 import {
   ArrowLeft,
+  AlertTriangle,
   Briefcase,
   Check,
   ChevronDown,
@@ -13,22 +14,26 @@ import {
   Loader2,
   PencilLine,
   PlusCircle,
+  ShieldCheck,
   TrendingUp,
   User,
+  X,
   ZoomIn,
   ZoomOut,
+  type LucideIcon,
 } from "lucide-react"
 
 import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
-import {
-  Card,
-  CardContent,
-  CardHeader,
-} from "@workspace/ui/components/card"
+import { Card, CardContent, CardHeader } from "@workspace/ui/components/card"
 import { Separator } from "@workspace/ui/components/separator"
 import { cn } from "@workspace/ui/lib/utils"
 
+import {
+  generateAtsReport,
+  type AtsMatchLevel,
+  type AtsReport,
+} from "@/lib/ats-report-api"
 import { downloadCvAsDocx } from "@/lib/cv-docx"
 import type { TailoredCv } from "@/lib/cv-generation-api"
 import type { JobAnalysisResponse } from "@/lib/job-analysis-api"
@@ -86,7 +91,7 @@ function ReviewSidebar(): JSX.Element {
           <User className="size-8" />
         </div>
         <div>
-          <p className="text-base font-semibold leading-tight">
+          <p className="text-base leading-tight font-semibold">
             Kariyer Asistanı
           </p>
           <p className="mt-0.5 text-xs text-muted-foreground">
@@ -195,14 +200,20 @@ function ReviewStepper(): JSX.Element {
 
 type ReviewToolbarProps = {
   onDownload: () => void
+  onGenerateAtsReport: () => void
   isDownloading: boolean
   isDownloadDisabled: boolean
+  isAtsReportLoading: boolean
+  isAtsReportDisabled: boolean
 }
 
 function ReviewToolbar({
   onDownload,
+  onGenerateAtsReport,
   isDownloading,
   isDownloadDisabled,
+  isAtsReportLoading,
+  isAtsReportDisabled,
 }: ReviewToolbarProps): JSX.Element {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
@@ -213,12 +224,22 @@ function ReviewToolbar({
 
       <div className="flex flex-wrap items-center gap-2">
         <Button type="button" variant="outline" size="sm">
-          <ListChecks data-icon="inline-start" />
-          ATS Kontrolü Yap
-        </Button>
-        <Button type="button" variant="outline" size="sm">
           <PencilLine data-icon="inline-start" />
           Düzenlemeye Geri Dön
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={onGenerateAtsReport}
+          disabled={isAtsReportDisabled || isAtsReportLoading}
+        >
+          {isAtsReportLoading ? (
+            <Loader2 data-icon="inline-start" className="animate-spin" />
+          ) : (
+            <ListChecks data-icon="inline-start" />
+          )}
+          {isAtsReportLoading ? "Rapor Hazırlanıyor..." : "ATS Raporu"}
         </Button>
         <div
           className="inline-flex items-stretch overflow-hidden rounded-lg"
@@ -297,7 +318,7 @@ function ReviewCvDocument({ cv }: ReviewCvDocumentProps): JSX.Element {
 
       {cv.summary.length > 0 ? (
         <section className="mt-6 space-y-2">
-          <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          <h3 className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
             Profesyonel Özet
           </h3>
           <p className="text-sm leading-6 text-foreground">{cv.summary}</p>
@@ -306,7 +327,7 @@ function ReviewCvDocument({ cv }: ReviewCvDocumentProps): JSX.Element {
 
       {cv.skills.length > 0 ? (
         <section className="mt-6 space-y-3">
-          <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          <h3 className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
             Öne Çıkan Yetkinlikler
           </h3>
           <div className="flex flex-wrap gap-2">
@@ -325,7 +346,7 @@ function ReviewCvDocument({ cv }: ReviewCvDocumentProps): JSX.Element {
 
       {cv.experiences.length > 0 ? (
         <section className="mt-6 space-y-4">
-          <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          <h3 className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
             Deneyim
           </h3>
           <div className="space-y-5">
@@ -367,7 +388,7 @@ function ReviewCvDocument({ cv }: ReviewCvDocumentProps): JSX.Element {
 
       {cv.projects.length > 0 ? (
         <section className="mt-6 space-y-3">
-          <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          <h3 className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
             Projeler
           </h3>
           <ul className="space-y-2 text-sm leading-6 text-foreground">
@@ -388,7 +409,7 @@ function ReviewCvDocument({ cv }: ReviewCvDocumentProps): JSX.Element {
 
       {cv.educations.length > 0 ? (
         <section className="mt-6 space-y-3">
-          <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          <h3 className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
             Eğitim
           </h3>
           <ul className="space-y-2 text-sm leading-6 text-foreground">
@@ -399,9 +420,7 @@ function ReviewCvDocument({ cv }: ReviewCvDocumentProps): JSX.Element {
               >
                 <span>
                   <span className="font-medium">{education.institution}</span>
-                  {education.degree.length > 0
-                    ? ` — ${education.degree}`
-                    : ""}
+                  {education.degree.length > 0 ? ` — ${education.degree}` : ""}
                 </span>
                 {education.period.length > 0 ? (
                   <span className="text-xs font-medium text-muted-foreground">
@@ -416,7 +435,7 @@ function ReviewCvDocument({ cv }: ReviewCvDocumentProps): JSX.Element {
 
       {cv.certifications.length > 0 ? (
         <section className="mt-6 space-y-3">
-          <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          <h3 className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
             Sertifikalar
           </h3>
           <ul className="space-y-1 text-sm leading-6 text-foreground">
@@ -431,7 +450,7 @@ function ReviewCvDocument({ cv }: ReviewCvDocumentProps): JSX.Element {
 
       {cv.languages.length > 0 ? (
         <section className="mt-6 space-y-3">
-          <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          <h3 className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
             Diller
           </h3>
           <div className="flex flex-wrap gap-2">
@@ -451,11 +470,132 @@ function ReviewCvDocument({ cv }: ReviewCvDocumentProps): JSX.Element {
   )
 }
 
-function EmptyCvState({
-  onBack,
-}: {
-  onBack: () => void
-}): JSX.Element {
+type AtsReportModalProps = {
+  report: AtsReport
+  onClose: () => void
+}
+
+function AtsReportModal({ report, onClose }: AtsReportModalProps): JSX.Element {
+  return (
+    <div
+      className="fixed inset-0 flex items-center justify-center bg-foreground/40 px-4 py-6"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="ats-report-title"
+    >
+      <Card className="max-h-full w-full max-w-2xl overflow-auto">
+        <CardHeader className="flex flex-row items-center justify-between gap-4 border-b border-border">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="size-5 text-primary" aria-hidden="true" />
+            <div>
+              <h2 id="ats-report-title" className="text-lg font-semibold">
+                ATS Raporu
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Oluşturulan CV'nin bu ilana göre tarama uyumluluğu.
+              </p>
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label="ATS raporunu kapat"
+            onClick={onClose}
+          >
+            <X />
+          </Button>
+        </CardHeader>
+
+        <CardContent className="grid gap-6 p-6 md:grid-cols-[220px_1fr]">
+          <div className="flex flex-col items-center justify-center gap-4 border-b border-border pb-6 md:border-r md:border-b-0 md:pr-6 md:pb-0">
+            <div
+              className="flex size-32 items-center justify-center rounded-full"
+              style={{
+                background: `conic-gradient(var(--primary) ${report.similarity_score}%, var(--muted) 0)`,
+              }}
+              aria-label={`ATS benzerlik skoru yüzde ${report.similarity_score}`}
+            >
+              <div className="flex size-24 flex-col items-center justify-center rounded-full bg-background">
+                <span className="text-3xl font-bold">
+                  {report.similarity_score}%
+                </span>
+                <span className="text-xs text-muted-foreground">Benzerlik</span>
+              </div>
+            </div>
+            <Badge variant="secondary" className="rounded-md">
+              {getAtsMatchLevelLabel(report.match_level)}
+            </Badge>
+          </div>
+
+          <div className="flex flex-col gap-5">
+            <ReportList
+              icon={ShieldCheck}
+              title="Güçlü Alanlar"
+              items={report.strong_matches}
+            />
+            <ReportList
+              icon={AlertTriangle}
+              title="Uyarılar"
+              items={report.warnings}
+            />
+            <ReportList
+              icon={ListChecks}
+              title="Öneriler"
+              items={report.recommendations}
+            />
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+type ReportListProps = {
+  icon: LucideIcon
+  title: string
+  items: string[]
+}
+
+function ReportList({
+  icon: Icon,
+  title,
+  items,
+}: ReportListProps): JSX.Element {
+  return (
+    <section className="flex flex-col gap-2">
+      <div className="flex items-center gap-2">
+        <Icon className="size-4 text-muted-foreground" aria-hidden="true" />
+        <h3 className="text-sm font-semibold">{title}</h3>
+      </div>
+      <ul className="flex flex-col gap-2">
+        {items.map((item) => (
+          <li
+            key={item}
+            className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm text-foreground"
+          >
+            {item}
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+function getAtsMatchLevelLabel(matchLevel: AtsMatchLevel): string {
+  switch (matchLevel) {
+    case "guclu":
+      return "Güçlü Eşleşme"
+    case "orta-guclu":
+      return "Orta-Güçlü Eşleşme"
+    case "orta":
+      return "Orta Eşleşme"
+    case "zayif":
+      return "Zayıf Eşleşme"
+  }
+}
+
+function EmptyCvState({ onBack }: { onBack: () => void }): JSX.Element {
   return (
     <article
       className="mx-auto w-full max-w-3xl rounded-lg border border-dashed border-border bg-background px-10 py-12 text-center shadow-sm"
@@ -465,15 +605,10 @@ function EmptyCvState({
         Henüz oluşturulmuş bir CV yok
       </h2>
       <p className="mt-2 text-sm text-muted-foreground">
-        Bu ilana özel bir CV oluşturmak için önce iş analizi sayfasına dönüp
-        "Bu İlana Özel CV Oluştur" düğmesine tıklayın.
+        Bu ilana özel bir CV oluşturmak için önce iş analizi sayfasına dönüp "Bu
+        İlana Özel CV Oluştur" düğmesine tıklayın.
       </p>
-      <Button
-        type="button"
-        variant="outline"
-        className="mt-6"
-        onClick={onBack}
-      >
+      <Button type="button" variant="outline" className="mt-6" onClick={onBack}>
         <ArrowLeft data-icon="inline-start" />
         İş Analizine Dön
       </Button>
@@ -489,6 +624,10 @@ export function CvReviewPage(): JSX.Element {
 
   const [isDownloading, setIsDownloading] = useState(false)
   const [downloadError, setDownloadError] = useState<string | null>(null)
+  const [atsReport, setAtsReport] = useState<AtsReport | null>(null)
+  const [isAtsReportOpen, setIsAtsReportOpen] = useState(false)
+  const [isGeneratingAtsReport, setIsGeneratingAtsReport] = useState(false)
+  const [atsReportError, setAtsReportError] = useState<string | null>(null)
 
   const handleBack = (): void => {
     if (state?.analysis !== undefined) {
@@ -514,6 +653,43 @@ export function CvReviewPage(): JSX.Element {
       )
     } finally {
       setIsDownloading(false)
+    }
+  }
+
+  const handleGenerateAtsReport = async (): Promise<void> => {
+    if (tailoredCv === null || isGeneratingAtsReport) {
+      return
+    }
+
+    const analysis = state?.analysis ?? null
+    const token = state?.token ?? null
+
+    if (analysis === null || token === null) {
+      setAtsReportError(
+        "ATS raporu için iş analizi veya oturum bilgisi bulunamadı. Lütfen iş analizinden tekrar CV oluşturun."
+      )
+      return
+    }
+
+    setIsGeneratingAtsReport(true)
+    setAtsReportError(null)
+
+    try {
+      const report = await generateAtsReport(
+        token,
+        analysis.job_description,
+        tailoredCv
+      )
+      setAtsReport(report)
+      setIsAtsReportOpen(true)
+    } catch (error) {
+      setAtsReportError(
+        error instanceof Error
+          ? error.message
+          : "ATS raporu oluşturulamadı. Lütfen tekrar deneyin."
+      )
+    } finally {
+      setIsGeneratingAtsReport(false)
     }
   }
 
@@ -549,8 +725,17 @@ export function CvReviewPage(): JSX.Element {
               onDownload={() => {
                 void handleDownload()
               }}
+              onGenerateAtsReport={() => {
+                void handleGenerateAtsReport()
+              }}
               isDownloading={isDownloading}
               isDownloadDisabled={tailoredCv === null}
+              isAtsReportLoading={isGeneratingAtsReport}
+              isAtsReportDisabled={
+                tailoredCv === null ||
+                state?.analysis === undefined ||
+                state?.token === undefined
+              }
             />
           </CardHeader>
 
@@ -563,6 +748,14 @@ export function CvReviewPage(): JSX.Element {
                 {downloadError}
               </p>
             ) : null}
+            {atsReportError !== null ? (
+              <p
+                role="alert"
+                className="mx-auto mb-4 w-full max-w-3xl rounded-md border border-destructive/40 bg-destructive/10 px-4 py-2 text-sm text-destructive"
+              >
+                {atsReportError}
+              </p>
+            ) : null}
             {tailoredCv !== null ? (
               <ReviewCvDocument cv={tailoredCv} />
             ) : (
@@ -571,6 +764,14 @@ export function CvReviewPage(): JSX.Element {
           </CardContent>
         </Card>
       </main>
+      {isAtsReportOpen && atsReport !== null ? (
+        <AtsReportModal
+          report={atsReport}
+          onClose={() => {
+            setIsAtsReportOpen(false)
+          }}
+        />
+      ) : null}
     </div>
   )
 }
