@@ -10,6 +10,20 @@ export type AddProfileProjectPayload = {
   url: string
 }
 
+export class SavedProfileNotFoundError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = "SavedProfileNotFoundError"
+  }
+}
+
+export class SavedProfileUnauthorizedError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = "SavedProfileUnauthorizedError"
+  }
+}
+
 type ApiErrorPayload = {
   detail?: unknown
 }
@@ -133,7 +147,17 @@ export async function getSavedProfile(
       throw new Error("Profil bilgisi alınamadı.")
     }
 
-    throw new Error(getErrorMessage(errorPayload, "Profil bilgisi alınamadı."))
+    const message = getErrorMessage(errorPayload, "Profil bilgisi alınamadı.")
+
+    if (response.status === 404) {
+      throw new SavedProfileNotFoundError(message)
+    }
+
+    if (response.status === 401) {
+      throw new SavedProfileUnauthorizedError(message)
+    }
+
+    throw new Error(message)
   }
 
   return response.json() as Promise<SavedProfileResponse>
