@@ -382,7 +382,7 @@ function ProfileContent({
                 onClick={() => setIsCertificationDialogOpen(true)}
               >
                 <Plus data-icon="inline-start" />
-                Sertifika Ekle
+                Ekle
               </Button>
             </div>
           }
