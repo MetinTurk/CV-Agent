@@ -2,10 +2,7 @@
 import type { Settings } from "../core/config"
 import { ProfileRepository } from "../db/repositories/profiles"
 import type { UserRecord } from "../db/schema"
-import type {
-  CvGenerationResponse,
-  TailoredCv,
-} from "../schemas/cv-generation"
+import type { CvGenerationResponse, TailoredCv } from "../schemas/cv-generation"
 import type { JobDescription } from "../schemas/job-analysis"
 import type { ProfileData } from "../schemas/profile-chat"
 import { CvGenerationAgentClient } from "./cv-generation-agent-client"
@@ -19,6 +16,7 @@ const EMPTY_PROFILE: ProfileData = {
   languages: [],
   work_experiences: [],
   education: null,
+  github_url: null,
   additional_information: null,
 }
 

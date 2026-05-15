@@ -147,6 +147,7 @@ test("profile chat saves profile and returns redirect when required fields are c
             education: "Boğaziçi Üniversitesi Bilgisayar Mühendisliği",
           },
           askedAbout: [
+            "github_url",
             "work_experiences",
             "projects",
             "certifications",
@@ -178,4 +179,78 @@ test("profile chat saves profile and returns redirect when required fields are c
       profileData: response.profile,
     },
   ])
+})
+
+test("profile chat imports GitHub projects when ready profile has GitHub URL", async () => {
+  const importedRequests: Array<{ userId: string; githubUrl: string }> = []
+  const service = new ProfileChatService(
+    testSettings,
+    {
+      async generateResponse() {
+        return {
+          reply:
+            "Profilin hazır. GitHub projelerini de profil sayfana ekledim.",
+          profilePatch: {
+            full_name: "Ayşe Yılmaz",
+            location: "İstanbul",
+            skills: ["React", "TypeScript"],
+            education: "Boğaziçi Üniversitesi Bilgisayar Mühendisliği",
+            github_url: "https://github.com/ayse",
+          },
+          askedAbout: [
+            "github_url",
+            "work_experiences",
+            "projects",
+            "certifications",
+            "languages",
+            "additional_information",
+          ],
+        }
+      },
+    },
+    {
+      async upsertForUser() {
+        throw new Error("Profile store should not be used after GitHub import")
+      },
+    },
+    {
+      async importPublicReposForProfile(userId, githubUrl) {
+        importedRequests.push({ userId, githubUrl })
+
+        return {
+          profile: {
+            data: {
+              full_name: "Ayşe Yılmaz",
+              location: "İstanbul",
+              skills: ["React", "TypeScript"],
+              projects: [
+                "cv-agent - CV generator (https://github.com/ayse/cv-agent)",
+              ],
+              certifications: [],
+              languages: [],
+              work_experiences: [],
+              education: "Boğaziçi Üniversitesi Bilgisayar Mühendisliği",
+              github_url: "https://github.com/ayse",
+              additional_information: null,
+            },
+          },
+        }
+      },
+    }
+  )
+
+  const response = await service.chat(testUser, {
+    message:
+      "Adım Ayşe Yılmaz. İstanbul'dayım. React ve TypeScript biliyorum. Boğaziçi Üniversitesi Bilgisayar Mühendisliği mezunuyum. GitHub profilim https://github.com/ayse",
+    session_id: "first-login-profile",
+  })
+
+  expect(importedRequests).toEqual([
+    { userId: testUser.id, githubUrl: "https://github.com/ayse" },
+  ])
+  expect(response.is_profile_ready).toBe(true)
+  expect(response.profile.projects).toEqual([
+    "cv-agent - CV generator (https://github.com/ayse/cv-agent)",
+  ])
+  expect(response.profile.github_url).toBe("https://github.com/ayse")
 })

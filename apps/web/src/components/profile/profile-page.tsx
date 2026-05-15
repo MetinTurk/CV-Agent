@@ -4,6 +4,7 @@ import {
   AlertCircle,
   BookOpen,
   BriefcaseBusiness,
+  GitBranch,
   Info,
   Languages,
   Link,
@@ -42,6 +43,7 @@ import type { AuthUser } from "@/lib/auth-api"
 import {
   addProfileProject,
   getSavedProfile,
+  importGithubProjects,
   updateProfile,
   type SavedProfileResponse,
 } from "@/lib/profile-api"
@@ -75,6 +77,7 @@ type ProfileFormState = {
   languages: string
   work_experiences: string
   education: string
+  github_url: string
   additional_information: string
 }
 
@@ -90,6 +93,7 @@ function profileToForm(profile: ProfileData): ProfileFormState {
     languages: profile.languages.join("\n"),
     work_experiences: profile.work_experiences.join("\n"),
     education: profile.education ?? "",
+    github_url: profile.github_url ?? "",
     additional_information: profile.additional_information ?? "",
   }
 }
@@ -110,6 +114,7 @@ function formToProfile(form: ProfileFormState): ProfileData {
     languages: splitLines(form.languages),
     work_experiences: splitLines(form.work_experiences),
     education: form.education.trim() || null,
+    github_url: form.github_url.trim() || null,
     additional_information: form.additional_information.trim() || null,
   }
 }
@@ -229,6 +234,7 @@ function ProfileContent({
   const [currentProfile, setCurrentProfile] = useState(initialProfile)
   const [currentUpdatedAt, setCurrentUpdatedAt] = useState(initialUpdatedAt)
   const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false)
+  const [isGithubDialogOpen, setIsGithubDialogOpen] = useState(false)
 
   if (isEditing) {
     return (
@@ -257,17 +263,40 @@ function ProfileContent({
             <p className="mt-1 text-sm text-muted-foreground">
               {currentProfile.location ?? emptyText}
             </p>
+            {currentProfile.github_url !== null ? (
+              <a
+                href={currentProfile.github_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-flex items-center gap-1.5 text-sm text-primary underline-offset-4 hover:underline"
+              >
+                <GitBranch className="size-4" />
+                {currentProfile.github_url}
+              </a>
+            ) : null}
           </div>
 
           <div className="flex shrink-0 flex-col gap-2 md:items-end">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsEditing(true)}
-            >
-              <Pencil data-icon="inline-start" />
-              Profili Güncelle
-            </Button>
+            <div className="flex flex-wrap gap-2 md:justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsEditing(true)}
+              >
+                <Pencil data-icon="inline-start" />
+                Profili Güncelle
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsGithubDialogOpen(true)}
+              >
+                <GitBranch data-icon="inline-start" />
+                {currentProfile.github_url === null
+                  ? "GitHub Ekle"
+                  : "GitHub Güncelle"}
+              </Button>
+            </div>
             <p className="text-xs text-muted-foreground">
               Son güncelleme: {formatDate(currentUpdatedAt)}
             </p>
@@ -322,6 +351,16 @@ function ProfileContent({
         open={isProjectDialogOpen}
         token={token}
         onOpenChange={setIsProjectDialogOpen}
+        onSaved={(saved) => {
+          setCurrentProfile(saved.profile)
+          setCurrentUpdatedAt(saved.updated_at)
+        }}
+      />
+      <GithubImportDialog
+        open={isGithubDialogOpen}
+        token={token}
+        initialUrl={currentProfile.github_url}
+        onOpenChange={setIsGithubDialogOpen}
         onSaved={(saved) => {
           setCurrentProfile(saved.profile)
           setCurrentUpdatedAt(saved.updated_at)
@@ -469,6 +508,171 @@ function AddProjectDialog({
   )
 }
 
+function GithubImportDialog({
+  open,
+  token,
+  initialUrl,
+  onOpenChange,
+  onSaved,
+}: {
+  open: boolean
+  token: string
+  initialUrl: string | null
+  onOpenChange: (open: boolean) => void
+  onSaved: (saved: SavedProfileResponse) => void
+}): JSX.Element {
+  const [githubUrl, setGithubUrl] = useState(initialUrl ?? "")
+  const [githubError, setGithubError] = useState<string | null>(null)
+  const [importMessage, setImportMessage] = useState<string | null>(null)
+  const [isImporting, setIsImporting] = useState(false)
+
+  useEffect(() => {
+    if (open) {
+      setGithubUrl(initialUrl ?? "")
+      setGithubError(null)
+      setImportMessage(null)
+      setIsImporting(false)
+    }
+  }, [initialUrl, open])
+
+  function handleOpenChange(nextOpen: boolean): void {
+    if (!nextOpen) {
+      setGithubError(null)
+      setImportMessage(null)
+      setIsImporting(false)
+    }
+
+    onOpenChange(nextOpen)
+  }
+
+  function validateGithubUrl(): string | null {
+    const trimmedUrl = githubUrl.trim()
+
+    if (trimmedUrl.length === 0) {
+      return "GitHub profil bağlantısı zorunludur."
+    }
+
+    try {
+      const parsedUrl = new URL(trimmedUrl)
+      const hostname = parsedUrl.hostname.toLocaleLowerCase("en-US")
+      const username = parsedUrl.pathname.split("/").filter(Boolean)[0]
+
+      if (hostname !== "github.com" && hostname !== "www.github.com") {
+        return "GitHub bağlantısı https://github.com/kullanici formatında olmalıdır."
+      }
+
+      if (username === undefined || username.length === 0) {
+        return "Geçerli bir GitHub kullanıcı adı girin."
+      }
+    } catch {
+      return "Geçerli bir GitHub profil bağlantısı girin."
+    }
+
+    return null
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    const validationError = validateGithubUrl()
+    if (validationError !== null) {
+      setGithubError(validationError)
+      return
+    }
+
+    setIsImporting(true)
+    setGithubError(null)
+    setImportMessage(null)
+
+    try {
+      const saved = await importGithubProjects(token, {
+        github_url: githubUrl.trim(),
+      })
+
+      onSaved(saved)
+      setImportMessage(
+        saved.imported_count === 0
+          ? "Yeni proje eklenmedi; repolarınız zaten profilinizde olabilir."
+          : `${saved.imported_count} GitHub reposu projelerinize eklendi.`
+      )
+      setIsImporting(false)
+    } catch (error) {
+      setGithubError(
+        error instanceof Error ? error.message : "GitHub projeleri alınamadı."
+      )
+      setIsImporting(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="p-0 sm:max-w-lg">
+        <form onSubmit={handleSubmit}>
+          <div className="flex flex-col gap-6 p-5">
+            <DialogHeader className="pr-8">
+              <DialogTitle>GitHub Projelerini Aktar</DialogTitle>
+              <DialogDescription className="leading-6">
+                Public GitHub repolarınız profilinizdeki projeler listesine
+                eklenir. Bu alan isteğe bağlıdır; GitHub kullanmıyorsanız boş
+                bırakabilirsiniz.
+              </DialogDescription>
+            </DialogHeader>
+
+            <FieldGroup>
+              <Field data-invalid={githubError !== null}>
+                <FieldLabel htmlFor="github-url">
+                  GitHub Profil Bağlantısı
+                </FieldLabel>
+                <div className="relative">
+                  <GitBranch className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="github-url"
+                    value={githubUrl}
+                    onChange={(event) => {
+                      setGithubUrl(event.target.value)
+                      setGithubError(null)
+                      setImportMessage(null)
+                    }}
+                    placeholder="https://github.com/kullanici"
+                    className="pl-8"
+                    aria-invalid={githubError !== null}
+                    disabled={isImporting}
+                  />
+                </div>
+                <FieldDescription className="flex items-start gap-1.5 text-xs">
+                  <Info className="mt-0.5 size-3.5 shrink-0" />
+                  Sadece public repolar alınır; GitHub hesabı bağlama yapılmaz.
+                </FieldDescription>
+                <FieldError>{githubError}</FieldError>
+                {importMessage !== null ? (
+                  <p className="text-sm text-muted-foreground">
+                    {importMessage}
+                  </p>
+                ) : null}
+              </Field>
+            </FieldGroup>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => handleOpenChange(false)}
+              disabled={isImporting}
+            >
+              İptal
+            </Button>
+            <Button type="submit" disabled={isImporting}>
+              <GitBranch data-icon="inline-start" />
+              {isImporting ? "Aktarılıyor..." : "Projeleri Aktar"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 function ProfileEditForm({
   profile,
   token,
@@ -529,6 +733,19 @@ function ProfileEditForm({
                 onChange={(e) => handleChange("location", e.target.value)}
                 placeholder="Konum"
               />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="github_url">GitHub Profil Bağlantısı</Label>
+              <div className="relative">
+                <GitBranch className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="github_url"
+                  value={form.github_url}
+                  onChange={(e) => handleChange("github_url", e.target.value)}
+                  placeholder="https://github.com/kullanici"
+                  className="pl-8"
+                />
+              </div>
             </div>
           </div>
 

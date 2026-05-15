@@ -10,6 +10,15 @@ export type AddProfileProjectPayload = {
   url: string
 }
 
+export type ImportGithubProjectsPayload = {
+  github_url: string
+}
+
+export type ImportGithubProjectsResponse = SavedProfileResponse & {
+  imported_count: number
+  imported_projects: string[]
+}
+
 export class SavedProfileNotFoundError extends Error {
   constructor(message: string) {
     super(message)
@@ -119,6 +128,44 @@ export async function addProfileProject(
   }
 
   return response.json() as Promise<SavedProfileResponse>
+}
+
+export async function importGithubProjects(
+  token: string,
+  payload: ImportGithubProjectsPayload
+): Promise<ImportGithubProjectsResponse> {
+  let response: Response
+
+  try {
+    response = await fetch(`${API_BASE_URL}/profile/github-projects`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    })
+  } catch {
+    throw new Error(
+      "API sunucusuna ulaşılamadı. Lütfen server'ın çalıştığını ve API adresinin doğru olduğunu kontrol edin."
+    )
+  }
+
+  if (!response.ok) {
+    let errorPayload: unknown = null
+
+    try {
+      errorPayload = await response.json()
+    } catch {
+      throw new Error("GitHub projeleri alınamadı.")
+    }
+
+    throw new Error(
+      getErrorMessage(errorPayload, "GitHub projeleri alınamadı.")
+    )
+  }
+
+  return response.json() as Promise<ImportGithubProjectsResponse>
 }
 
 export async function getSavedProfile(

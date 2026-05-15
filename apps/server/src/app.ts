@@ -15,17 +15,20 @@ import { UserRepository } from "./db/repositories/users"
 import { AuthService } from "./services/auth-service"
 import { AtsReportService } from "./services/ats-report-service"
 import { CvGenerationService } from "./services/cv-generation-service"
+import { GithubProjectService } from "./services/github-project-service"
 import { JobAnalysisService } from "./services/job-analysis-service"
 import { ProfileChatService } from "./services/profile-chat-service"
 
 export function createApp(settings: Settings) {
   const userRepository = new UserRepository()
   const profileRepository = new ProfileRepository()
+  const githubProjectService = new GithubProjectService(profileRepository)
   const authService = new AuthService(userRepository, settings)
   const profileChatService = new ProfileChatService(
     settings,
     undefined,
-    profileRepository
+    profileRepository,
+    githubProjectService
   )
   const jobAnalysisService = new JobAnalysisService(
     settings,
@@ -81,7 +84,13 @@ export function createApp(settings: Settings) {
       api
         .use(createAuthRoutes(authService))
         .use(createHealthRoutes(settings))
-        .use(createProfileRoutes(authService, profileRepository))
+        .use(
+          createProfileRoutes(
+            authService,
+            profileRepository,
+            githubProjectService
+          )
+        )
         .use(createProfileChatRoutes(authService, profileChatService))
         .use(createJobAnalysisRoutes(authService, jobAnalysisService))
         .use(createCvGenerationRoutes(authService, cvGenerationService))

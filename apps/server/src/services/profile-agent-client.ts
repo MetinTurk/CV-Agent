@@ -28,6 +28,7 @@ export type ProfileAgentResult = {
 }
 
 export const OPTIONAL_PROFILE_FIELDS = [
+  "github_url",
   "work_experiences",
   "projects",
   "certifications",
@@ -77,6 +78,7 @@ Amacın kullanıcının CV bilgilerini Türkçe, doğal ve verimli bir sohbetle 
 
 ## Opsiyonel Alanlar
 Zorunlular tamamlandıktan sonra, sırasıyla şunları sor (hepsini sormak zorunlusun; kullanıcı geçmek isterse saygı göster ama soruyu atla):
+- github_url: GitHub profil bağlantısı (isteğe bağlıdır; kullanıcı GitHub kullanmıyorsa geçebilir)
 - work_experiences: İş deneyimleri (şirket, pozisyon, dönem)
 - projects: Kişisel veya profesyonel projeler
 - certifications: Aldığı sertifikalar
@@ -175,9 +177,7 @@ export class ProfileAgentClient {
     )
   }
 
-  private async fetchOnce(
-    request: ProfileAgentRequest
-  ): Promise<GroqResponse> {
+  private async fetchOnce(request: ProfileAgentRequest): Promise<GroqResponse> {
     const controller = new AbortController()
     const timeout = setTimeout(
       () => controller.abort(),
@@ -191,7 +191,9 @@ export class ProfileAgentClient {
           "Content-Type": "application/json",
           Authorization: `Bearer ${this.settings.groqApiKey ?? ""}`,
         },
-        body: JSON.stringify(buildGroqPayload(this.settings.agentModel, request)),
+        body: JSON.stringify(
+          buildGroqPayload(this.settings.agentModel, request)
+        ),
         signal: controller.signal,
       })
 
@@ -271,8 +273,9 @@ export function parseProfileAgentResult(text: string): ProfileAgentResult {
 
   const validOptionalFields = new Set<string>(OPTIONAL_PROFILE_FIELDS)
   const askedAbout = Array.isArray(parsedJson.asked_about)
-    ? (parsedJson.asked_about as unknown[])
-        .filter((f): f is string => typeof f === "string" && validOptionalFields.has(f))
+    ? (parsedJson.asked_about as unknown[]).filter(
+        (f): f is string => typeof f === "string" && validOptionalFields.has(f)
+      )
     : []
 
   return {
@@ -317,6 +320,7 @@ function sanitizeProfilePatch(value: Record<string, unknown>): ProfilePatch {
     "full_name",
     "location",
     "education",
+    "github_url",
     "additional_information",
   ] as const
   const allowedListFields = [

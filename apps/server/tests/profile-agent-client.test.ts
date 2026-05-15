@@ -38,6 +38,7 @@ const testRequest: ProfileAgentRequest = {
     languages: [],
     work_experiences: [],
     education: null,
+    github_url: null,
     additional_information: null,
   },
   missingRequiredFields: ["full_name", "location", "skills", "education"],

@@ -13,7 +13,24 @@ export const ProfileProjectLinkRequestSchema = t.Object({
   url: t.String({ minLength: 1, maxLength: 2048 }),
 })
 
+export const GithubProjectsImportRequestSchema = t.Object({
+  github_url: t.String({ minLength: 1, maxLength: 2048 }),
+})
+
+export const GithubProjectsImportResponseSchema = t.Object({
+  profile: ProfileDataSchema,
+  updated_at: t.String(),
+  imported_count: t.Number({ minimum: 0 }),
+  imported_projects: t.Array(t.String()),
+})
+
 export type SavedProfileResponse = Static<typeof SavedProfileResponseSchema>
 export type ProfileProjectLinkRequest = Static<
   typeof ProfileProjectLinkRequestSchema
+>
+export type GithubProjectsImportRequest = Static<
+  typeof GithubProjectsImportRequestSchema
+>
+export type GithubProjectsImportResponse = Static<
+  typeof GithubProjectsImportResponseSchema
 >

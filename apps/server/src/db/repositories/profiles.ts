@@ -17,7 +17,15 @@ function createEmptyProfileData(): ProfileData {
     languages: [],
     work_experiences: [],
     education: null,
+    github_url: null,
     additional_information: null,
+  }
+}
+
+function normalizeProfileData(profileData: ProfileData): ProfileData {
+  return {
+    ...profileData,
+    github_url: profileData.github_url ?? null,
   }
 }
 
@@ -29,7 +37,12 @@ export class ProfileRepository {
       .where(eq(profiles.userId, userId))
       .limit(1)
 
-    return profile ?? null
+    return profile === undefined
+      ? null
+      : {
+          ...profile,
+          data: normalizeProfileData(profile.data),
+        }
   }
 
   async upsertForUser(
@@ -40,12 +53,12 @@ export class ProfileRepository {
       .insert(profiles)
       .values({
         userId,
-        data: profileData,
+        data: normalizeProfileData(profileData),
       })
       .onConflictDoUpdate({
         target: profiles.userId,
         set: {
-          data: profileData,
+          data: normalizeProfileData(profileData),
           updatedAt: sql`now()`,
         },
       })
@@ -60,6 +73,47 @@ export class ProfileRepository {
 
   async appendProject(userId: string, project: string): Promise<ProfileRecord> {
     return this.appendListItem(userId, "projects", project)
+  }
+
+  async mergeGithubProjects(
+    userId: string,
+    githubUrl: string,
+    projects: Array<{ value: string; sourceUrl: string }>
+  ): Promise<{ profile: ProfileRecord; importedProjects: string[] }> {
+    const existingProfile = await this.getByUserId(userId)
+    const profileData = existingProfile?.data ?? createEmptyProfileData()
+    const currentProjects = profileData.projects
+    const importedProjects: string[] = []
+    const normalizedExistingProjects = new Set(
+      currentProjects.map((project) => project.toLocaleLowerCase("tr-TR"))
+    )
+
+    for (const project of projects) {
+      const normalizedProject = project.value.toLocaleLowerCase("tr-TR")
+      const normalizedSourceUrl = project.sourceUrl.toLocaleLowerCase("tr-TR")
+      const hasExistingProject =
+        normalizedExistingProjects.has(normalizedProject) ||
+        currentProjects.some((currentProject) =>
+          currentProject
+            .toLocaleLowerCase("tr-TR")
+            .includes(normalizedSourceUrl)
+        )
+
+      if (hasExistingProject) {
+        continue
+      }
+
+      importedProjects.push(project.value)
+      normalizedExistingProjects.add(normalizedProject)
+    }
+
+    const profile = await this.upsertForUser(userId, {
+      ...profileData,
+      github_url: githubUrl,
+      projects: [...currentProjects, ...importedProjects],
+    })
+
+    return { profile, importedProjects }
   }
 
   private async appendListItem(
