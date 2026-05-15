@@ -4,6 +4,7 @@ import {
   AlertCircle,
   BookOpen,
   BriefcaseBusiness,
+  Eye,
   GitBranch,
   Info,
   Languages,
@@ -234,7 +235,13 @@ function ProfileContent({
   const [currentProfile, setCurrentProfile] = useState(initialProfile)
   const [currentUpdatedAt, setCurrentUpdatedAt] = useState(initialUpdatedAt)
   const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false)
+  const [isCertificationDialogOpen, setIsCertificationDialogOpen] =
+    useState(false)
   const [isGithubDialogOpen, setIsGithubDialogOpen] = useState(false)
+  const [listDialog, setListDialog] = useState<{
+    title: string
+    values: string[]
+  } | null>(null)
 
   if (isEditing) {
     return (
@@ -317,14 +324,30 @@ function ProfileContent({
           title="Projeler"
           icon={BriefcaseBusiness}
           action={
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => setIsProjectDialogOpen(true)}
-            >
-              <Plus data-icon="inline-start" />
-              Ekle
-            </Button>
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  setListDialog({
+                    title: "Tüm Projeler",
+                    values: currentProfile.projects,
+                  })
+                }
+              >
+                <Eye data-icon="inline-start" />
+                Tümünü Gör
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setIsProjectDialogOpen(true)}
+              >
+                <Plus data-icon="inline-start" />
+                Ekle
+              </Button>
+            </div>
           }
         >
           <BulletList values={currentProfile.projects} />
@@ -334,7 +357,36 @@ function ProfileContent({
           <BulletList values={currentProfile.work_experiences} />
         </ProfileSection>
 
-        <ProfileSection title="Sertifikalar" icon={Medal}>
+        <ProfileSection
+          title="Sertifikalar"
+          icon={Medal}
+          action={
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  setListDialog({
+                    title: "Tüm Sertifikalar",
+                    values: currentProfile.certifications,
+                  })
+                }
+              >
+                <Eye data-icon="inline-start" />
+                Tümünü Gör
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setIsCertificationDialogOpen(true)}
+              >
+                <Plus data-icon="inline-start" />
+                Ekle
+              </Button>
+            </div>
+          }
+        >
           <BulletList values={currentProfile.certifications} />
         </ProfileSection>
 
@@ -356,6 +408,16 @@ function ProfileContent({
           setCurrentUpdatedAt(saved.updated_at)
         }}
       />
+      <AddCertificationDialog
+        open={isCertificationDialogOpen}
+        token={token}
+        profile={currentProfile}
+        onOpenChange={setIsCertificationDialogOpen}
+        onSaved={(saved) => {
+          setCurrentProfile(saved.profile)
+          setCurrentUpdatedAt(saved.updated_at)
+        }}
+      />
       <GithubImportDialog
         open={isGithubDialogOpen}
         token={token}
@@ -364,6 +426,16 @@ function ProfileContent({
         onSaved={(saved) => {
           setCurrentProfile(saved.profile)
           setCurrentUpdatedAt(saved.updated_at)
+        }}
+      />
+      <ProfileListDialog
+        open={listDialog !== null}
+        title={listDialog?.title ?? ""}
+        values={listDialog?.values ?? []}
+        onOpenChange={(open) => {
+          if (!open) {
+            setListDialog(null)
+          }
         }}
       />
     </>
@@ -500,6 +572,132 @@ function AddProjectDialog({
             <Button type="submit" disabled={isSaving}>
               <Sparkles data-icon="inline-start" />
               {isSaving ? "Ekleniyor..." : "Ekle ve Analiz Et"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function AddCertificationDialog({
+  open,
+  token,
+  profile,
+  onOpenChange,
+  onSaved,
+}: {
+  open: boolean
+  token: string
+  profile: ProfileData
+  onOpenChange: (open: boolean) => void
+  onSaved: (saved: SavedProfileResponse) => void
+}): JSX.Element {
+  const [certification, setCertification] = useState("")
+  const [certificationError, setCertificationError] = useState<string | null>(
+    null
+  )
+  const [isSaving, setIsSaving] = useState(false)
+
+  function resetForm(): void {
+    setCertification("")
+    setCertificationError(null)
+    setIsSaving(false)
+  }
+
+  function handleOpenChange(nextOpen: boolean): void {
+    if (!nextOpen) {
+      resetForm()
+    }
+
+    onOpenChange(nextOpen)
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    const normalizedCertification = certification.trim()
+
+    if (normalizedCertification.length === 0) {
+      setCertificationError("Sertifika adı zorunludur.")
+      return
+    }
+
+    const alreadyExists = profile.certifications.some(
+      (item) =>
+        item.toLocaleLowerCase("tr-TR") ===
+        normalizedCertification.toLocaleLowerCase("tr-TR")
+    )
+
+    if (alreadyExists) {
+      setCertificationError("Bu sertifika profilinizde zaten var.")
+      return
+    }
+
+    setIsSaving(true)
+    setCertificationError(null)
+
+    try {
+      const saved = await updateProfile(token, {
+        ...profile,
+        certifications: [...profile.certifications, normalizedCertification],
+      })
+
+      onSaved(saved)
+      handleOpenChange(false)
+    } catch (error) {
+      setCertificationError(
+        error instanceof Error ? error.message : "Sertifika eklenemedi."
+      )
+      setIsSaving(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="p-0 sm:max-w-lg">
+        <form onSubmit={handleSubmit}>
+          <div className="flex flex-col gap-6 p-5">
+            <DialogHeader className="pr-8">
+              <DialogTitle>Sertifika Ekle</DialogTitle>
+              <DialogDescription>
+                Profilinizde görünecek sertifika adını girin.
+              </DialogDescription>
+            </DialogHeader>
+
+            <FieldGroup>
+              <Field data-invalid={certificationError !== null}>
+                <FieldLabel htmlFor="certification-name">
+                  Sertifika Adı
+                </FieldLabel>
+                <Input
+                  id="certification-name"
+                  value={certification}
+                  onChange={(event) => {
+                    setCertification(event.target.value)
+                    setCertificationError(null)
+                  }}
+                  placeholder="AWS Cloud Practitioner"
+                  aria-invalid={certificationError !== null}
+                  disabled={isSaving}
+                />
+                <FieldError>{certificationError}</FieldError>
+              </Field>
+            </FieldGroup>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => handleOpenChange(false)}
+              disabled={isSaving}
+            >
+              İptal
+            </Button>
+            <Button type="submit" disabled={isSaving}>
+              <Plus data-icon="inline-start" />
+              {isSaving ? "Ekleniyor..." : "Sertifika Ekle"}
             </Button>
           </DialogFooter>
         </form>
@@ -668,6 +866,43 @@ function GithubImportDialog({
             </Button>
           </DialogFooter>
         </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function ProfileListDialog({
+  open,
+  title,
+  values,
+  onOpenChange,
+}: {
+  open: boolean
+  title: string
+  values: string[]
+  onOpenChange: (open: boolean) => void
+}): JSX.Element {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="p-0 sm:max-w-xl">
+        <div className="flex flex-col gap-4 p-5">
+          <DialogHeader className="pr-8">
+            <DialogTitle>{title}</DialogTitle>
+            <DialogDescription>
+              Profilinizde kayıtlı {values.length} öğe.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="max-h-[420px] overflow-y-auto pr-1">
+            <BulletList values={values} />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button type="button" onClick={() => onOpenChange(false)}>
+            Kapat
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
