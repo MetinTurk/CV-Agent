@@ -32,6 +32,13 @@ type ProfileStore = {
   upsertForUser(userId: string, profileData: ProfileData): Promise<unknown>
 }
 
+type GithubProjectImporter = {
+  importPublicReposForProfile(
+    userId: string,
+    githubUrl: string
+  ): Promise<{ profile: { data: ProfileData } }>
+}
+
 const EMPTY_PROFILE: ProfileData = {
   full_name: null,
   location: null,
@@ -53,7 +60,8 @@ export class ProfileChatService {
     private readonly profileAgent: ProfileAgent = new ProfileAgentClient(
       settings
     ),
-    private readonly profileStore: ProfileStore = new ProfileRepository()
+    private readonly profileStore: ProfileStore = new ProfileRepository(),
+    private readonly githubProjectImporter?: GithubProjectImporter
   ) {}
 
   async chat(
@@ -110,7 +118,10 @@ export class ProfileChatService {
     ]
 
     if (isProfileReady) {
-      await this.profileStore.upsertForUser(user.id, conversation.profile)
+      conversation.profile = await this.saveReadyProfile(
+        user.id,
+        conversation.profile
+      )
     }
 
     return {
@@ -150,6 +161,34 @@ export class ProfileChatService {
     this.conversations.set(conversationKey, conversation)
 
     return conversation
+  }
+
+  private async saveReadyProfile(
+    userId: string,
+    profile: ProfileData
+  ): Promise<ProfileData> {
+    if (
+      profile.github_url !== null &&
+      this.githubProjectImporter !== undefined
+    ) {
+      try {
+        const importedProfile =
+          await this.githubProjectImporter.importPublicReposForProfile(
+            userId,
+            profile.github_url
+          )
+
+        return importedProfile.profile.data
+      } catch (error) {
+        console.error(
+          "GitHub projeleri profil sohbeti sonunda içe aktarılamadı",
+          error
+        )
+      }
+    }
+
+    await this.profileStore.upsertForUser(userId, profile)
+    return profile
   }
 }
 

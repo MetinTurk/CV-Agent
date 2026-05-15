@@ -28,6 +28,7 @@ export type ProfileAgentResult = {
 }
 
 export const OPTIONAL_PROFILE_FIELDS = [
+  "github_url",
   "work_experiences",
   "projects",
   "certifications",
@@ -77,6 +78,7 @@ Amacın kullanıcının CV bilgilerini Türkçe, doğal ve verimli bir sohbetle 
 
 ## Opsiyonel Alanlar
 Zorunlular tamamlandıktan sonra, sırasıyla şunları sor (hepsini sormak zorunlusun; kullanıcı geçmek isterse saygı göster ama soruyu atla):
+- github_url: GitHub profil bağlantısı (isteğe bağlıdır; kullanıcı GitHub kullanmıyorsa geçebilir)
 - work_experiences: İş deneyimleri (şirket, pozisyon, dönem)
 - projects: Kişisel veya profesyonel projeler
 - certifications: Aldığı sertifikalar

@@ -277,14 +277,26 @@ function ProfileContent({
           </div>
 
           <div className="flex shrink-0 flex-col gap-2 md:items-end">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsEditing(true)}
-            >
-              <Pencil data-icon="inline-start" />
-              Profili Güncelle
-            </Button>
+            <div className="flex flex-wrap gap-2 md:justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsEditing(true)}
+              >
+                <Pencil data-icon="inline-start" />
+                Profili Güncelle
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsGithubDialogOpen(true)}
+              >
+                <GitBranch data-icon="inline-start" />
+                {currentProfile.github_url === null
+                  ? "GitHub Ekle"
+                  : "GitHub Güncelle"}
+              </Button>
+            </div>
             <p className="text-xs text-muted-foreground">
               Son güncelleme: {formatDate(currentUpdatedAt)}
             </p>
@@ -305,25 +317,14 @@ function ProfileContent({
           title="Projeler"
           icon={BriefcaseBusiness}
           action={
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => setIsGithubDialogOpen(true)}
-              >
-                <GitBranch data-icon="inline-start" />
-                GitHub'dan Aktar
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => setIsProjectDialogOpen(true)}
-              >
-                <Plus data-icon="inline-start" />
-                Ekle
-              </Button>
-            </div>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setIsProjectDialogOpen(true)}
+            >
+              <Plus data-icon="inline-start" />
+              Ekle
+            </Button>
           }
         >
           <BulletList values={currentProfile.projects} />

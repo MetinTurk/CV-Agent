@@ -66,7 +66,8 @@ function getInitialMessage(user: AuthUser): ChatMessage {
     content:
       `Merhaba ${user.first_name}. Ben Kariyer Yardımcı Pilotun. ` +
       "Harikalar yaratabilmek için önce profilini netleştirelim. " +
-      "**Adın soyadın** ve **yaşadığın şehir/ülke** ile başlayalım.",
+      "**Adın soyadın** ve **yaşadığın şehir/ülke** ile başlayalım. " +
+      "İstersen **GitHub profil bağlantını** da aynı mesajda ekleyebilirsin; zorunlu değil.",
   }
 }
 
