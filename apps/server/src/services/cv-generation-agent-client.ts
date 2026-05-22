@@ -33,7 +33,7 @@ type GroqResponse = {
 }
 
 const GROQ_CHAT_COMPLETIONS_URL =
-  "https://openrouter.ai/api/v1/chat/completions"
+  "https://api.groq.com/openai/v1/chat/completions"
 
 const CV_GENERATION_SYSTEM_PROMPT = `
 Sen CV Agent uygulamasının Hedefli CV Yazım Asistanısın.
@@ -92,9 +92,9 @@ export class CvGenerationAgentClient {
   async generateTailoredCv(
     request: CvGenerationAgentRequest
   ): Promise<TailoredCv> {
-    if (this.settings.openRouterApiKey === null) {
+    if (this.settings.groqApiKey === null) {
       throw new CvGenerationAgentConfigurationError(
-        "OPENROUTER_API_KEY tanımlı olmadığı için CV üretim asistanı LLM isteği gönderemiyor."
+        "GROQ_API_KEY tanımlı olmadığı için CV üretim asistanı LLM isteği gönderemiyor."
       )
     }
 
@@ -151,7 +151,7 @@ export class CvGenerationAgentClient {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${this.settings.openRouterApiKey ?? ""}`,
+          Authorization: `Bearer ${this.settings.groqApiKey ?? ""}`,
         },
         body: JSON.stringify(payload),
         signal: controller.signal,
@@ -196,8 +196,8 @@ function buildPayload(
   return {
     model,
     messages,
-    temperature: 1,
-    thinking: { type: "enabled", budget_tokens: 8000 },
+    temperature: 0.4,
+    response_format: { type: "json_object" },
   }
 }
 

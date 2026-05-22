@@ -21,7 +21,6 @@ const testSettings: Settings = {
   corsAllowedOrigins: ["http://localhost:5173"],
   corsAllowedOriginRegex: null,
   groqApiKey: "test-groq-api-key",
-  openRouterApiKey: null,
   agentModel: "openai/gpt-oss-120b",
   agentRequestTimeoutSeconds: 20,
   agentMaxRetries: 0,

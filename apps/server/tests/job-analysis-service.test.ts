@@ -34,7 +34,6 @@ const testSettings: Settings = {
   corsAllowedOrigins: ["http://localhost:5173"],
   corsAllowedOriginRegex: null,
   groqApiKey: "test-groq-key",
-  openRouterApiKey: null,
   agentModel: "test-model",
   agentRequestTimeoutSeconds: 1,
   agentMaxRetries: 0,
