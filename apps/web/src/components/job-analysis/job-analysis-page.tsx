@@ -1,6 +1,6 @@
 // Module: Renders the job analysis result page (yeterli/eksik yönler, uyumluluk puanı, tavsiyeler).
-import { useState, type JSX } from "react"
-import { useLocation, useNavigate } from "react-router"
+import { useEffect, useState, type JSX } from "react"
+import { useLocation, useNavigate, useParams } from "react-router"
 import {
   ArrowLeft,
   Briefcase,
@@ -25,8 +25,12 @@ import {
 import { cn } from "@workspace/ui/lib/utils"
 
 import { AppSidebar } from "@/components/app-sidebar"
+import { getStoredAccessToken } from "@/lib/auth-token"
 import { generateTailoredCv } from "@/lib/cv-generation-api"
-import type { JobAnalysisResponse } from "@/lib/job-analysis-api"
+import {
+  getJobAnalysisById,
+  type JobAnalysisResponse,
+} from "@/lib/job-analysis-api"
 
 type JobAnalysisLocationState = {
   analysis?: JobAnalysisResponse
@@ -36,11 +40,57 @@ type JobAnalysisLocationState = {
 export function JobAnalysisPage(): JSX.Element {
   const navigate = useNavigate()
   const location = useLocation()
+  const params = useParams()
   const state = (location.state ?? null) as JobAnalysisLocationState | null
-  const analysis = state?.analysis ?? null
-  const token = state?.token
+  const stateAnalysis = state?.analysis ?? null
+  const stateToken = state?.token
+  const analysisId = params.id ?? null
+  const token = stateToken ?? getStoredAccessToken() ?? undefined
+  const [fetchedAnalysis, setFetchedAnalysis] =
+    useState<JobAnalysisResponse | null>(null)
+  const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [isGeneratingCv, setIsGeneratingCv] = useState(false)
   const [generationError, setGenerationError] = useState<string | null>(null)
+  const analysis = stateAnalysis ?? fetchedAnalysis
+
+  useEffect(() => {
+    if (stateAnalysis !== null) return
+    if (analysisId === null) return
+    if (token === undefined) {
+      setLoadError("Bu analizi görmek için lütfen oturum açın.")
+      return
+    }
+
+    let isActive = true
+    setIsLoadingAnalysis(true)
+    setLoadError(null)
+
+    getJobAnalysisById(token, analysisId)
+      .then((data) => {
+        if (isActive) {
+          setFetchedAnalysis(data)
+        }
+      })
+      .catch((error: unknown) => {
+        if (isActive) {
+          setLoadError(
+            error instanceof Error
+              ? error.message
+              : "İş analizi yüklenemedi."
+          )
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setIsLoadingAnalysis(false)
+        }
+      })
+
+    return () => {
+      isActive = false
+    }
+  }, [analysisId, stateAnalysis, token])
 
   const handleGenerateCv = async (): Promise<void> => {
     if (analysis === null || token === undefined) {
@@ -71,27 +121,42 @@ export function JobAnalysisPage(): JSX.Element {
   }
 
   if (analysis === null) {
+    const isFetching = isLoadingAnalysis || (analysisId !== null && loadError === null)
+    const fallbackTitle = loadError !== null
+      ? "Analiz yüklenemedi"
+      : isFetching
+        ? "Analiz yükleniyor..."
+        : "Henüz bir analiz yok"
+    const fallbackDescription = loadError !== null
+      ? loadError
+      : isFetching
+        ? "İş analizi sunucudan getiriliyor. Lütfen bekleyin."
+        : "Analiz sonucunu görmek için kenar çubuğundan \"Yeni Analiz Başlat\" seçeneğini kullanarak bir iş ilanı bağlantısı analiz edin."
+
     return (
       <div className="flex min-h-svh bg-muted/20">
         <AppSidebar token={token} />
         <main className="flex flex-1 items-center justify-center p-6">
           <Card className="max-w-md text-center">
             <CardHeader>
-              <CardTitle>Henüz bir analiz yok</CardTitle>
+              <CardTitle>{fallbackTitle}</CardTitle>
             </CardHeader>
             <CardContent className="gap-4">
               <p className="text-sm text-muted-foreground">
-                Analiz sonucunu görmek için kenar çubuğundan "Yeni Analiz Başlat"
-                seçeneğini kullanarak bir iş ilanı bağlantısı analiz edin.
+                {fallbackDescription}
               </p>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => navigate(-1)}
-              >
-                <ArrowLeft data-icon="inline-start" />
-                Geri dön
-              </Button>
+              {isFetching ? (
+                <Loader2 className="mx-auto size-5 animate-spin text-muted-foreground" />
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => navigate(-1)}
+                >
+                  <ArrowLeft data-icon="inline-start" />
+                  Geri dön
+                </Button>
+              )}
             </CardContent>
           </Card>
         </main>

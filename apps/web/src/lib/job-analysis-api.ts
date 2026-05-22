@@ -86,3 +86,39 @@ export async function createJobAnalysis(
 
   return response.json() as Promise<JobAnalysisResponse>
 }
+
+export async function getJobAnalysisById(
+  token: string,
+  analysisId: string
+): Promise<JobAnalysisResponse> {
+  let response: Response
+
+  try {
+    response = await fetch(
+      `${API_BASE_URL}/job-analyses/${encodeURIComponent(analysisId)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    )
+  } catch {
+    throw new Error(
+      "API sunucusuna ulaşılamadı. Lütfen server'ın çalıştığını ve API adresinin doğru olduğunu kontrol edin."
+    )
+  }
+
+  if (!response.ok) {
+    let errorPayload: unknown = null
+
+    try {
+      errorPayload = await response.json()
+    } catch {
+      throw new Error("İş analizi yüklenemedi.")
+    }
+
+    throw new Error(getErrorMessage(errorPayload, "İş analizi yüklenemedi."))
+  }
+
+  return response.json() as Promise<JobAnalysisResponse>
+}

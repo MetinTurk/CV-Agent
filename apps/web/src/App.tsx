@@ -99,6 +99,7 @@ export function App(): JSX.Element {
     persistence: TokenPersistence
   ): void => {
     saveAccessToken(response.access_token, persistence)
+    window.dispatchEvent(new CustomEvent("cv-agent:token-changed"))
     setAccessToken(response.access_token)
     setExtensionStatus("checking")
     setIsExtensionPromptDismissed(false)
@@ -107,6 +108,7 @@ export function App(): JSX.Element {
 
   const handleLogout = (): void => {
     clearAccessToken()
+    window.dispatchEvent(new CustomEvent("cv-agent:token-changed"))
     setAccessToken(null)
     setExtensionStatus("checking")
     setIsExtensionPromptDismissed(false)
@@ -174,6 +176,7 @@ export function App(): JSX.Element {
       />
       <Route path={PROFILE_CHAT_ROUTE} element={profileChatPage} />
       <Route path={JOB_ANALYSIS_ROUTE} element={<JobAnalysisPage />} />
+      <Route path={`${JOB_ANALYSIS_ROUTE}/:id`} element={<JobAnalysisPage />} />
       <Route path={CV_REVIEW_ROUTE} element={<CvReviewPage />} />
       <Route
         path={PROFILE_ROUTE}
