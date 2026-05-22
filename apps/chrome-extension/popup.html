@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Career Co-pilot</title>
     <link rel="stylesheet" href="./popup.css" />
-    <script src="./popup.js" defer></script>
+    <script type="module" src="./popup.js"></script>
   </head>
   <body>
     <main class="popup-shell" aria-label="Career Co-pilot uzantısı">
@@ -42,8 +42,14 @@
           </div>
         </div>
 
-        <p class="status-message" data-status-message>
+        <p class="status-message" data-status-message data-tone="neutral">
           Analiz için önce iş ilanı bilgilerini toplayın.
+        </p>
+
+        <p class="signin-hint" data-signin-hint hidden>
+          Devam etmek için
+          <a href="#" data-signin-link>CV Agent web uygulamasında</a>
+          oturum açın.
         </p>
 
         <div class="action-stack">
@@ -53,7 +59,7 @@
           </button>
           <button class="primary-action" type="button" data-analyze-button disabled>
             <span class="action-icon" aria-hidden="true"></span>
-            İş İlanını Analiz Et
+            <span data-analyze-label>İş İlanını Analiz Et</span>
           </button>
         </div>
       </section>

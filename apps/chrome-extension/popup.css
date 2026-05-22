@@ -261,6 +261,37 @@ button {
   line-height: 1.45;
 }
 
+.status-message[data-tone="success"] {
+  color: #027a48;
+}
+
+.status-message[data-tone="error"] {
+  color: #b42318;
+}
+
+.signin-hint {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  color: #92400e;
+  font-size: 12px;
+  line-height: 1.45;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  border-radius: 4px;
+}
+
+.signin-hint a {
+  color: #075fc7;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.secondary-action:disabled,
+.primary-action:disabled[data-busy] {
+  opacity: 0.7;
+  cursor: progress;
+}
+
 .action-stack {
   display: grid;
   gap: 8px;
